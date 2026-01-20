@@ -2,40 +2,43 @@
   "expo": {
     "name": "Tribes",
     "slug": "Tribes",
-    "version": "1.0.0",
-
-    "scheme": "Tribes",
-    "platforms": ["ios", "android"],
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": ["expo-router"],
+    "scheme": "tribes",
+    "platforms": [
+      "ios",
+      "android"
+    ], 
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true,
-
       "tsconfigPaths": true
     },
-
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-
+    "icon": "./src/assets/icon.png",
     "userInterfaceStyle": "light",
-
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./src/assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./src/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "package": "com.rodcordeiro.Tribes"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5736c04f-6827-4122-8cba-7b90161bfad4"
       }
     }
   }
