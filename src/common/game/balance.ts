@@ -4,6 +4,7 @@ export type GameBalance = {
     initial: number;
     growthRate: number;
     minToDivide: number;
+    starvationLossRate: number;
   };
   supplies: {
     initial: number;
@@ -39,6 +40,7 @@ export const DEFAULT_BALANCE: GameBalance = {
     initial: 30,
     growthRate: 0.05,
     minToDivide: 80,
+    starvationLossRate: 0.05,
   },
   supplies: {
     initial: 60,

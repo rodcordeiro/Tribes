@@ -1,9 +1,11 @@
-import { Balance, INITIAL_POPULATION_BASE, INITIAL_SUPPLIES_BASE } from '../contants';
+import { v4 as uuid } from 'uuid';
+import { Balance } from '../contants';
 import { randomEnumValue } from '../utils';
 import { TribeCore } from './enums';
 
 export class Tribe {
   public position!: Game.Position;
+  public id!: string;
   public name: string = '';
   public color: string = '';
 
@@ -18,7 +20,9 @@ export class Tribe {
     name,
     color,
     core = randomEnumValue(TribeCore),
+    id,
   }: {
+    id?: string;
     initialPosition: Game.Position;
     initialPopulation?: number;
     initialSupplies?: number;
@@ -26,6 +30,7 @@ export class Tribe {
     color: string;
     core: TribeCore;
   }) {
+    this.id = id ?? uuid();
     this.position = initialPosition;
     this.name = name;
     this.color = color;
@@ -35,6 +40,7 @@ export class Tribe {
   }
   clone(): Tribe {
     return new Tribe({
+      id: this.id,
       initialPosition: { ...this.position },
       initialPopulation: this.population,
       initialSupplies: this.supplies,

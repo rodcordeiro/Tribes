@@ -63,6 +63,7 @@ export class Board {
     this.MAX_WIDTH = width;
     this.balance = balance;
   }
+
   getStats() {
     const totalPopulation = this.tribes.reduce((sum, t) => sum + t.population, 0);
 
@@ -74,6 +75,24 @@ export class Board {
       population: totalPopulation,
       supplies: totalSupplies,
     };
+  }
+
+  clone(): Board {
+    const board = new Board({
+      width: this.MAX_WIDTH!,
+      height: this.MAX_HEIGHT!,
+      tribesCount: 0,
+      balance: this.balance,
+      logger: this.logger!,
+    });
+
+    board.tiles = this.tiles; //this.tiles.map((t) => t.clone());
+    board.tribes = this.tribes; // this.tribes.map((t) => t.clone());
+    board.ticks = this.ticks;
+    board.ticksDelayInMs = this.ticksDelayInMs;
+    board.activeEvent = this.activeEvent;
+
+    return board;
   }
 
   tick(): Board {
@@ -107,7 +126,8 @@ export class Board {
             const hasBiggerProduction = this.getProduction(target) > this.getProduction(tile);
             if (hasBiggerProduction) {
               const threshold =
-                this.balance.population.minToDivide + this.balance.core[tribe.core].divisionThresholdModifier;
+                this.balance.population.minToDivide +
+                this.balance.core[tribe.core].divisionThresholdModifier;
 
               if (tribe.population > threshold) {
                 const migratingPop = Math.floor(tribe.population * 0.3);
@@ -378,23 +398,6 @@ export class Board {
     }
 
     return base + this.globalProductionModifier;
-  }
-
-  clone(): Board {
-    const board = new Board({
-      width: this.MAX_WIDTH!,
-      height: this.MAX_HEIGHT!,
-      tribesCount: 0,
-      logger: this.logger!,
-    });
-
-    board.tiles = this.tiles; //this.tiles.map((t) => t.clone());
-    board.tribes = this.tribes; // this.tribes.map((t) => t.clone());
-    board.ticks = this.ticks;
-    board.ticksDelayInMs = this.ticksDelayInMs;
-    board.activeEvent = this.activeEvent;
-
-    return board;
   }
 
   private moveTribe(tribe: Tribe, board: Board) {

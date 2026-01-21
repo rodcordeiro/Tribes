@@ -5,6 +5,8 @@ import { GameBalance, DEFAULT_BALANCE } from '@/common/game/balance';
 
 const GameContext = createContext<{
   state: GameState;
+  balance: GameBalance;
+  setBalance: React.Dispatch<React.SetStateAction<GameBalance>>;
   dispatch: React.ActionDispatch<[action: GameAction]>;
 } | null>(null);
 
@@ -20,20 +22,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // INIT
   useEffect(() => {
-    dispatch({
-      type: 'INIT',
-      board: new Board({
-        width: 4,
-        height: 4,
-        tribesCount: 4,
-        logger: (entry) => dispatch({ type: 'LOG', entry: { ...entry, timestamp: new Date() } }),
-      }),
-    });
-  }, []);
+    if (!state.board)
+      dispatch({
+        type: 'INIT',
+        board: new Board({
+          width: 4,
+          height: 4,
+          tribesCount: 4,
+          balance: balance,
+          logger: (entry) => dispatch({ type: 'LOG', entry: { ...entry, timestamp: new Date() } }),
+        }),
+      });
+  }, [balance, state.board]);
 
   // GAME LOOP
   useEffect(() => {
-    console.log({ running: state.running, speed: state.speed });
     if (!state.running) return;
 
     const interval = setInterval(() => {
@@ -44,7 +47,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [state.board, state.running, state.speed]);
 
-  return <GameContext.Provider value={{ state, dispatch }}>{children}</GameContext.Provider>;
+  return (
+    <GameContext.Provider value={{ state, balance, setBalance, dispatch }}>
+      {children}
+    </GameContext.Provider>
+  );
 }
 
 export function useGame() {
