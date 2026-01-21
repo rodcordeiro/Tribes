@@ -1,6 +1,7 @@
 import { GameAction, gameReducer, GameState } from '@/stores/game.reducer';
-import { createContext, ReactNode, useContext, useEffect, useReducer } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useReducer, useState } from 'react';
 import { Board } from '../common/game/board';
+import { GameBalance, DEFAULT_BALANCE } from '@/common/game/balance';
 
 const GameContext = createContext<{
   state: GameState;
@@ -8,10 +9,12 @@ const GameContext = createContext<{
 } | null>(null);
 
 export function GameProvider({ children }: { children: ReactNode }) {
+  const [balance, setBalance] = useState<GameBalance>(DEFAULT_BALANCE);
   const [state, dispatch] = useReducer(gameReducer, {
     board: undefined,
     running: false,
     speed: 1000,
+    balance,
     logs: [],
   });
 

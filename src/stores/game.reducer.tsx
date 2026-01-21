@@ -1,3 +1,4 @@
+import { GameBalance } from '@/common/game/balance';
 import { Board } from '@/common/game/board';
 
 export type LogEntry = {
@@ -17,6 +18,7 @@ export type GameAction =
 export type GameState = {
   board?: Board;
   running: boolean;
+  balance: GameBalance;
   speed: number;
   logs: LogEntry[];
   lastEvent?: string;
@@ -29,6 +31,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         board: action.board,
         running: true,
+        logs: [],
       };
 
     case 'TICK':

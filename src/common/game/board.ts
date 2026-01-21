@@ -5,6 +5,7 @@ import { Tribe } from './tribe';
 import { TileType, TribeCore } from './enums';
 import { Balance, MIN_POPULATION_TO_DIVIDE } from '../contants';
 import { Events, GameEvent } from './events';
+import { GameBalance } from './balance';
 interface ActiveEvent {
   event: GameEvent;
   remaining: number;
@@ -18,7 +19,7 @@ export class Board {
   public ticksDelayInMs: number = 2500;
   private logger!: (_entry: LogEntry) => void;
   public activeEvent?: ActiveEvent;
-
+  private balance: GameBalance;
   public globalProductionModifier = 0;
 
   constructor({
@@ -26,10 +27,12 @@ export class Board {
     width = 10,
     height = 10,
     logger,
+    balance,
   }: {
     tribesCount: number;
     width: number;
     height: number;
+    balance: GameBalance;
     logger: (_entry: LogEntry) => void;
   }) {
     this.logger = logger;
@@ -58,6 +61,7 @@ export class Board {
 
     this.MAX_HEIGHT = height;
     this.MAX_WIDTH = width;
+    this.balance = balance;
   }
   getStats() {
     const totalPopulation = this.tribes.reduce((sum, t) => sum + t.population, 0);
@@ -103,7 +107,7 @@ export class Board {
             const hasBiggerProduction = this.getProduction(target) > this.getProduction(tile);
             if (hasBiggerProduction) {
               const threshold =
-                Balance.population.minToDivide + Balance.core[tribe.core].divisionThresholdModifier;
+                this.balance.population.minToDivide + this.balance.core[tribe.core].divisionThresholdModifier;
 
               if (tribe.population > threshold) {
                 const migratingPop = Math.floor(tribe.population * 0.3);
@@ -189,7 +193,7 @@ export class Board {
       event,
       remaining: event.duration,
     };
-    this.logger({type:'Info',content:`Evento ${event.name} iniciado!`})
+    this.logger({ type: 'Info', content: `Evento ${event.name} iniciado!` });
     event.apply(this);
   }
 
@@ -207,6 +211,7 @@ export class Board {
       )
     );
   }
+
   private fleeFromWar(tribe: Tribe): Tribe {
     const safeTiles = this.getAdjacentTiles(tribe.position).filter(
       (t) =>
@@ -227,6 +232,7 @@ export class Board {
 
     return t;
   }
+
   private handleWar(group: Tribe[]): Tribe {
     return this.resolveCombat(group);
   }
@@ -270,6 +276,7 @@ export class Board {
 
     return map;
   }
+
   private resolveCombat(tribes: Tribe[]): Tribe {
     if (tribes.length === 1) return tribes[0];
 
@@ -297,18 +304,18 @@ export class Board {
     t.supplies += production;
 
     // CONSUMO
-    t.supplies -= t.population * Balance.supplies.consumptionPerPop;
+    t.supplies -= t.population * this.balance.supplies.consumptionPerPop;
 
     // CRESCIMENTO / FOME
     if (t.supplies >= 0) {
       // crescimento lento
-      const growthRate = Balance.population.growthRate + Balance.core[t.core].growthBonus;
+      const growthRate = this.balance.population.growthRate + this.balance.core[t.core].growthBonus;
 
       t.population += Math.floor(t.population * growthRate);
     } else {
       // fome
       t.population -= Math.ceil(
-        Math.max(1, Math.abs(t.supplies) * Balance.population.starvationLossRate)
+        Math.max(1, Math.abs(t.supplies) * this.balance.population.starvationLossRate)
       );
       t.supplies = 0;
     }
@@ -323,6 +330,7 @@ export class Board {
 
     return t;
   }
+
   private getAdjacentTiles(pos: Game.Position): Tile[] {
     const directions = [
       { x: 0, y: -1 },
@@ -337,6 +345,7 @@ export class Board {
       )
       .filter(Boolean);
   }
+
   private shouldMigrate(tribe: Tribe, tile: Tile): boolean {
     if (tribe.supplies > tribe.population * 2) return false;
     // if (tribe.population < 20) return true;
@@ -357,16 +366,16 @@ export class Board {
     switch (tile.tileType) {
       case TileType.Forest:
         base = 3;
+        if (this.isCoastal(tile)) base += 2;
         break;
       case TileType.LandTile:
         base = 3;
+        if (this.isCoastal(tile)) base += 1;
         break;
       case TileType.Mountain:
         base = 1;
         break;
     }
-
-    if (this.isCoastal(tile)) base += 1;
 
     return base + this.globalProductionModifier;
   }
