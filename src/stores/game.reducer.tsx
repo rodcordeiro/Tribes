@@ -4,7 +4,7 @@ import { Board } from '@/common/game/board';
 export type LogEntry = {
   type: 'Info' | 'War' | 'Marriage';
   content: string;
-  timestamp?: Date;
+  tick?: number;
 };
 
 export type GameAction =

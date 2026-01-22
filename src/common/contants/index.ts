@@ -1,25 +1,37 @@
 export const TILE_SIZE = 5;
 
-export const INITIAL_POPULATION_BASE = 30;
-export const INITIAL_SUPPLIES_BASE = 60;
-
-export const POPULATION_GROWTH_RATE = 0.05;
-export const SUPPLIES_CONSUMPTION_PER_POP = 1;
-
-export const MIN_POPULATION_TO_DIVIDE = 80;
-export const DIVISION_POPULATION_COST = 0.3;
+export const PERSONALITY_PRESETS = {
+  war: {
+    aggression: 0.8,
+    cooperation: 0.2,
+    fear: 0.1,
+    expansionism: 0.7,
+  },
+  peace: {
+    aggression: 0.1,
+    cooperation: 0.8,
+    fear: 0.4,
+    expansionism: 0.3,
+  },
+  exploration: {
+    aggression: 0.3,
+    cooperation: 0.3,
+    fear: 0.2,
+    expansionism: 0.9,
+  },
+};
 
 export const Balance = {
   population: {
-    initial: 30,
+    initial: 10,
     minToDivide: 100,
-    growthRate: 0.75,
-    divisionCost: 0.25,
-    starvationLossRate: 0.5,
+    growthRate: 0.05,
+    divisionCost: 0.75,
+    starvationLossRate: 0.75,
   },
 
   supplies: {
-    initial: 100,
+    initial: 25,
     consumptionPerPop: 1,
   },
 

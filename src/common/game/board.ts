@@ -1,5 +1,11 @@
 import { LogEntry } from '@/stores/game.reducer';
-import { getRandomIntInclusive, getTribeName, randomEnumValue, randomHexColor } from '../utils';
+import {
+  clamp,
+  getRandomIntInclusive,
+  getTribeName,
+  randomEnumValue,
+  randomHexColor,
+} from '../utils';
 import { Tile } from './tile';
 import { Tribe } from './tribe';
 import { TileType, TribeCore } from './enums';
@@ -101,62 +107,13 @@ export class Board {
 
     next.tribes = next.tribes
       .map((tribe) => {
-        if (Math.random() < 0.1) {
-          this.moveTribe(tribe, next);
-        }
-        if (!tribe.position) return tribe;
-
-        if (tribe.core === TribeCore.Exploration && next.isEnemyNearby(tribe)) {
-          return next.fleeFromWar(tribe);
-        }
-
-        const tile = next.getTileAt(tribe.position);
-        if (!tile) {
+        try {
+          const tile = next.getTileAt(tribe.position);
+          return next.processEconomy(tribe, tile);
+        } catch (error) {
+          console.error(error);
           return tribe;
         }
-
-        const shouldMigrate = this.shouldMigrate(tribe, this.getTileAt(tribe.position));
-
-        if (shouldMigrate) {
-          const target = this.chooseMigrationTile(tribe.position);
-          if (!target || !target.position) return tribe;
-          if (target) {
-            if (target.tileType === TileType.WaterTile) return tribe;
-
-            const hasBiggerProduction = this.getProduction(target) > this.getProduction(tile);
-            if (hasBiggerProduction) {
-              const threshold =
-                this.balance.population.minToDivide +
-                this.balance.core[tribe.core].divisionThresholdModifier;
-
-              if (tribe.population > threshold) {
-                const migratingPop = Math.floor(tribe.population * 0.3);
-
-                tribe.population -= migratingPop;
-                next.logger({ type: 'Marriage', content: `Uma nova tribo nasce de ${tribe.name}` });
-                next.tribes.push(
-                  new Tribe({
-                    initialPosition: target.position,
-                    initialPopulation: migratingPop,
-                    initialSupplies: Math.floor(tribe.supplies * 0.3),
-                    name: getTribeName(),
-                    color: randomHexColor(),
-                    core: Math.random() > 0.05 ? tribe.core : randomEnumValue(TribeCore),
-                  })
-                );
-              } else {
-                tribe.move(target.position);
-              }
-            }
-          }
-        }
-
-        return tribe;
-      })
-      .map((tribe) => {
-        if (this.ticks % 5 !== 0) return tribe;
-        const tile = next.getTileAt(tribe.position);
-        return next.processEconomy(tribe, tile);
       })
       .filter(Boolean) as Tribe[];
 
@@ -175,22 +132,14 @@ export class Board {
       next.logger({ type: 'Info', content: `Tribe ${newTribe.name} has begun` });
     }
 
-    // combate
-    const conflicts = next.detectConflicts(next.tribes);
-
-    next.tribes = [];
-
-    for (const group of conflicts.values()) {
-      const cores = new Set(group.map((t) => t.core));
-
-      if (cores.has(TribeCore.War)) {
-        next.tribes.push(next.handleWar(group));
-      } else if (cores.has(TribeCore.Peace)) {
-        next.tribes.push(...next.handlePeace(group));
-      } else {
-        next.tribes.push(group[0]);
+    next.tribes.forEach((tribe) => {
+      try {
+        this.decideAction(tribe, next);
+      } catch (e) {
+        console.error(e);
       }
-    }
+    });
+
     if (next.activeEvent) {
       next.activeEvent.remaining--;
 
@@ -203,6 +152,276 @@ export class Board {
     }
     return next;
   }
+
+  decideAction(tribe: Tribe, nextBoard: Board) {
+    const nearby = this.getNearbyTribes(tribe, tribe.personality.expansionism > 0.75 ? 2 : 1);
+    if (nearby.length === 0) {
+      return this.decideExploration(tribe);
+    }
+
+    for (const other of nearby) {
+      const threat = tribe.evaluateThreat(tribe, other);
+      const opportunity = tribe.evaluateOpportunity(tribe, other);
+
+      // 1️⃣ FUGA
+      if (tribe.personality.fear > threat && tribe.core === 'exploration') {
+        this.logger({ type: 'Info', content: `${tribe.name} flew away from ${other.name}` });
+        return this.flee(tribe, other);
+      }
+
+      // 2️⃣ ATAQUE
+      if (tribe.core === 'war' && tribe.personality.aggression > Math.random()) {
+        this.logger({ type: 'War', content: `${tribe.name} attacks ${other.name}!` });
+        return this.attack(tribe, other);
+      }
+
+      // 3️⃣ COOPERAÇÃO / CASAMENTO
+      if (tribe.core === 'peace' && opportunity > Math.random()) {
+        return this.mergeTribes(tribe, other, nextBoard);
+      }
+    }
+
+    return this.decideExploration(tribe);
+  }
+  getNearbyTribes(tribe: Tribe, range = 1): Tribe[] {
+    return this.tribes.filter((other) => {
+      if (other === tribe || !other.position || !tribe.position) return false;
+
+      const dx = Math.abs(other.position.x - tribe.position.x);
+      const dy = Math.abs(other.position.y - tribe.position.y);
+
+      return dx <= range && dy <= range;
+    });
+  }
+
+  flee(tribe: Tribe, threat: Tribe) {
+    const dx = tribe.position!.x - threat.position!.x;
+    const dy = tribe.position!.y - threat.position!.y;
+
+    tribe.move({
+      x: tribe.position!.x + Math.sign(dx),
+      y: tribe.position!.y + Math.sign(dy),
+    });
+  }
+
+  attack(attacker: Tribe, defender: Tribe) {
+    const powerA = attacker.population * attacker.personality.aggression;
+    const powerD = defender.population * (1 - defender.personality.fear);
+
+    if (powerA > powerD) {
+      defender.population *= 0.7;
+      attacker.population *= 0.9;
+
+      defender.personality.aggression = defender.applyMemory(
+        defender.personality.aggression,
+        +0.01
+      );
+      defender.personality.fear = defender.applyMemory(defender.personality.fear, +0.2);
+      defender.personality.cooperation = defender.applyMemory(defender.personality.fear, -0.1);
+
+      this.logger({ type: 'War', content: `${attacker.name} wins over ${defender.name} at war!` });
+    } else {
+      this.logger({ type: 'War', content: `${attacker.name} loses for ${defender.name}` });
+      attacker.population *= 0.6;
+      attacker.personality.aggression = attacker.applyMemory(
+        attacker.personality.aggression,
+        +0.01
+      );
+      attacker.personality.cooperation = attacker.applyMemory(attacker.personality.fear, -0.1);
+      attacker.personality.fear = attacker.applyMemory(attacker.personality.fear, +0.2);
+      defender.personality.cooperation = defender.applyMemory(defender.personality.fear, 0.1);
+    }
+  }
+
+  mergeTribes(a: Tribe, b: Tribe, nextBoard: Board) {
+    const newPop = Math.floor((a.population + b.population) * 0.6);
+
+    nextBoard.tribes = this.tribes.filter((t) => t !== a && t !== b);
+
+    nextBoard.tribes.push(
+      new Tribe({
+        initialPosition: a.position!,
+        name: getTribeName(),
+        color: randomHexColor(),
+        core: randomEnumValue(TribeCore),
+        initialPopulation: newPop,
+      })
+    );
+  }
+  decideExploration(tribe: Tribe) {
+    if (!tribe.position) return;
+
+    const currentTile = this.getTileAt(tribe.position);
+    const neighbors = this.getNeighborTiles(tribe.position);
+
+    if (!currentTile || neighbors.length === 0) return;
+
+    let bestTile = currentTile;
+    let bestScore = this.evaluateTileSurvival(tribe, currentTile);
+
+    for (const tile of neighbors) {
+      const score = this.evaluateTileSurvival(tribe, tile);
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestTile = tile;
+      }
+    }
+
+    // só se move se for melhor
+    if (bestTile !== currentTile) {
+      tribe.move(bestTile.position);
+    }
+  }
+
+  private evaluateTileSurvival(tribe: Tribe, tile: Tile): number {
+    let score = 1;
+
+    // // 🌱 Fertilidade (produção)
+    // score += tile.fertility * (1 - tribe.personality.fear);
+
+    // // ☠️ Hostilidade (perigo)
+    // score -= tile.hostility * tribe.personality.fear;
+
+    // 🧭 Preferência cultural
+    if (tribe.core === 'exploration') {
+      score += 0.2;
+    }
+
+    // if (tribe.core === 'peace' && tile.hostility > 0.5) {
+    //   score -= 0.2;
+    // }
+
+    return score;
+  }
+
+  public getNeighborTiles(pos: Game.Position): Tile[] {
+    const dirs = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+    ];
+
+    return dirs
+      .map((d) => ({ x: pos.x + d.x, y: pos.y + d.y }))
+      .filter((d) => this.isValidPosition(d))
+      .map((d) => this.getTileAt(d))
+      .filter(Boolean) as Tile[];
+  }
+
+  public isValidPosition(pos: Game.Position) {
+    return pos.x >= 0 && pos.y >= 0 && pos.x < this.MAX_WIDTH! && pos.y < this.MAX_HEIGHT!;
+  }
+
+  // tick(): Board {
+  //   const next = this.clone();
+  //   next.ticks++;
+
+  //   next.tribes = next.tribes
+  //     .map((tribe) => {
+  //       if (Math.random() < 0.1) {
+  //         this.moveTribe(tribe, next);
+  //       }
+  //       if (!tribe.position) return tribe;
+
+  //       if (tribe.core === TribeCore.Exploration && next.isEnemyNearby(tribe)) {
+  //         return next.fleeFromWar(tribe);
+  //       }
+
+  //       const tile = next.getTileAt(tribe.position);
+  //       if (!tile) {
+  //         return tribe;
+  //       }
+
+  //       const shouldMigrate = this.shouldMigrate(tribe, this.getTileAt(tribe.position));
+
+  //       if (shouldMigrate) {
+  //         const target = this.chooseMigrationTile(tribe.position);
+  //         if (!target || !target.position) return tribe;
+  //         if (target) {
+  //           if (target.tileType === TileType.WaterTile) return tribe;
+
+  //           const hasBiggerProduction = this.getProduction(target) > this.getProduction(tile);
+  //           if (hasBiggerProduction) {
+  //             const threshold =
+  //               this.balance.population.minToDivide +
+  //               this.balance.core[tribe.core].divisionThresholdModifier;
+
+  //             if (tribe.population > threshold) {
+  //               const migratingPop = Math.floor(tribe.population * 0.3);
+
+  //               tribe.population -= migratingPop;
+  //               next.logger({ type: 'Marriage', content: `Uma nova tribo nasce de ${tribe.name}` });
+  //               next.tribes.push(
+  //                 new Tribe({
+  //                   initialPosition: target.position,
+  //                   initialPopulation: migratingPop,
+  //                   initialSupplies: Math.floor(tribe.supplies * 0.3),
+  //                   name: getTribeName(),
+  //                   color: randomHexColor(),
+  //                   core: Math.random() > 0.05 ? tribe.core : randomEnumValue(TribeCore),
+  //                 })
+  //               );
+  //             } else {
+  //               tribe.move(target.position);
+  //             }
+  //           }
+  //         }
+  //       }
+
+  //       return tribe;
+  //     })
+  //     .map((tribe) => {
+  //       if (this.ticks % 5 !== 0) return tribe;
+  //       const tile = next.getTileAt(tribe.position);
+  //       return next.processEconomy(tribe, tile);
+  //     })
+  //     .filter(Boolean) as Tribe[];
+
+  //   const should_new_tribe_appear = Math.random();
+  //   if (should_new_tribe_appear < 0.02) {
+  //     const newTribe = new Tribe({
+  //       initialPosition: {
+  //         x: getRandomIntInclusive(0, next.MAX_WIDTH ?? 0),
+  //         y: getRandomIntInclusive(0, next.MAX_HEIGHT ?? 0),
+  //       },
+  //       name: getTribeName(),
+  //       color: randomHexColor(),
+  //       core: randomEnumValue(TribeCore),
+  //     });
+  //     next.tribes.push(newTribe);
+  //     next.logger({ type: 'Info', content: `Tribe ${newTribe.name} has begun` });
+  //   }
+
+  //   // combate
+  //   const conflicts = next.detectConflicts(next.tribes);
+
+  //   next.tribes = [];
+
+  //   for (const group of conflicts.values()) {
+  //     const cores = new Set(group.map((t) => t.core));
+
+  //     if (cores.has(TribeCore.War)) {
+  //       next.tribes.push(next.handleWar(group));
+  //     } else if (cores.has(TribeCore.Peace)) {
+  //       next.tribes.push(...next.handlePeace(group));
+  //     } else {
+  //       next.tribes.push(group[0]);
+  //     }
+  //   }
+  //   if (next.activeEvent) {
+  //     next.activeEvent.remaining--;
+
+  //     if (next.activeEvent.remaining <= 0) {
+  //       next.activeEvent.event.revert(next);
+  //       next.activeEvent = undefined;
+  //     }
+  //   } else {
+  //     next.tryTriggerEvent();
+  //   }
+  //   return next;
+  // }
   private tryTriggerEvent() {
     if (this.activeEvent) return;
     if (Math.random() > 0.05) return; // 5%
@@ -221,101 +440,6 @@ export class Board {
     return this.tiles[position.x][position.y];
   }
 
-  private isEnemyNearby(tribe: Tribe): boolean {
-    return this.getAdjacentTiles(tribe.position).some((tile) =>
-      this.tribes.some(
-        (t) =>
-          t.core === TribeCore.War &&
-          t.position.x === tile.position.x &&
-          t.position.y === tile.position.y
-      )
-    );
-  }
-
-  private fleeFromWar(tribe: Tribe): Tribe {
-    const safeTiles = this.getAdjacentTiles(tribe.position).filter(
-      (t) =>
-        !this.tribes.some(
-          (enemy) =>
-            enemy.core === TribeCore.War &&
-            enemy.position.x === t.position.x &&
-            enemy.position.y === t.position.y
-        )
-    );
-
-    if (safeTiles.length === 0) return tribe;
-
-    const target = safeTiles[Math.floor(Math.random() * safeTiles.length)];
-
-    const t = tribe.clone();
-    t.position = target.position;
-
-    return t;
-  }
-
-  private handleWar(group: Tribe[]): Tribe {
-    return this.resolveCombat(group);
-  }
-
-  private handlePeace(group: Tribe[]): Tribe[] {
-    if (group.length !== 2) return group;
-
-    const [a, b] = group;
-
-    const childPop = Math.floor((a.population + b.population) * 0.3);
-
-    a.population -= Math.floor(a.population * 0.2);
-    b.population -= Math.floor(b.population * 0.2);
-    const name = getTribeName();
-    this.logger({
-      type: 'Marriage',
-      content: `${a.name} e ${b.name} se unem em paz para gerar ${name}`,
-    });
-    return [
-      a,
-      b,
-      new Tribe({
-        initialPosition: a.position,
-        core: randomEnumValue(TribeCore),
-        initialPopulation: childPop,
-        initialSupplies: 10,
-        color: randomHexColor(),
-        name,
-      }),
-    ];
-  }
-
-  private detectConflicts(tribes: Tribe[]): Map<string, Tribe[]> {
-    const map = new Map<string, Tribe[]>();
-
-    for (const tribe of tribes) {
-      const key = `${tribe.position.x}:${tribe.position.y}`;
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(tribe);
-    }
-
-    return map;
-  }
-
-  private resolveCombat(tribes: Tribe[]): Tribe {
-    if (tribes.length === 1) return tribes[0];
-
-    const scored = tribes.map((t) => ({
-      tribe: t,
-      score: t.population + Math.floor(t.supplies / 2),
-    }));
-
-    scored.sort((a, b) => b.score - a.score);
-    this.logger({
-      type: 'War',
-      content: `A ${scored.at(0)?.tribe.name} derrotou a(s) tribo(s) ${scored
-        .slice(1)
-        .map((t) => t.tribe.name)
-        .join(', ')}!`,
-    });
-    return scored[0].tribe;
-  }
-
   private processEconomy(tribe: Tribe, tile: Tile) {
     const t = tribe.clone();
 
@@ -324,10 +448,10 @@ export class Board {
     t.supplies += production;
 
     // CONSUMO
-    t.supplies -= t.population * this.balance.supplies.consumptionPerPop;
+    t.supplies -= Math.round(t.population * this.balance.supplies.consumptionPerPop);
 
     // CRESCIMENTO / FOME
-    if (t.supplies >= 0) {
+    if (t.supplies >= 1) {
       // crescimento lento
       const growthRate = this.balance.population.growthRate + this.balance.core[t.core].growthBonus;
 
@@ -337,11 +461,8 @@ export class Board {
       t.population -= Math.ceil(
         Math.max(1, Math.abs(t.supplies) * this.balance.population.starvationLossRate)
       );
-      t.supplies = 0;
+      t.supplies = Math.max(0, t.supplies);
     }
-
-    // limite inferior
-    // t.population = Math.max(1, t.population);
 
     if (t.population < 1) {
       this.logger({ type: 'Info', content: `The tribe ${t.name} has died` });
@@ -360,26 +481,14 @@ export class Board {
     ];
 
     return directions
-      .map((d) =>
-        this.getTileAt({ x: this.clamp(pos.x + d.x, 0, 1), y: this.clamp(pos.y + d.y, 0, 1) })
-      )
+      .map((d) => this.getTileAt({ x: clamp(pos.x + d.x, 0, 1), y: clamp(pos.y + d.y, 0, 1) }))
       .filter(Boolean);
   }
 
-  private shouldMigrate(tribe: Tribe, tile: Tile): boolean {
-    if (tribe.supplies > tribe.population * 2) return false;
-    // if (tribe.population < 20) return true;
-
-    return this.getProduction(tile) <= 1;
-  }
-  private chooseMigrationTile(from: Game.Position): Tile | null {
-    const candidates = this.getAdjacentTiles(from);
-
-    return candidates.sort((a, b) => this.getProduction(b) - this.getProduction(a))[0] ?? null;
-  }
   private isCoastal(tile: Tile): boolean {
     return this.getAdjacentTiles(tile.position).some((t) => t.tileType === TileType.WaterTile);
   }
+
   private getProduction(tile: Tile): number {
     let base = 0;
 
@@ -398,27 +507,5 @@ export class Board {
     }
 
     return base + this.globalProductionModifier;
-  }
-
-  private moveTribe(tribe: Tribe, board: Board) {
-    const { position } = tribe;
-    if (!position) return;
-
-    const move_d20 = Math.random();
-    const moves = move_d20 < 0.05 ? 3 : move_d20 < 0.2 ? 2 : 1;
-
-    tribe.move({
-      x: this.clamp(position.x + (Math.random() < 0.5 ? -moves : moves), 0, board.MAX_WIDTH! - 1),
-      y: this.clamp(position.y + (Math.random() < 0.5 ? -moves : moves), 0, board.MAX_HEIGHT! - 1),
-    });
-    if (!this.logger) return;
-    this.logger({
-      content: `[${tribe.name}] Moved to [x:${tribe.position?.x}, y:${tribe.position?.y}]`,
-      type: 'Info',
-    });
-  }
-
-  private clamp(value: number, min: number, max: number) {
-    return Math.max(min, Math.min(max, value));
   }
 }

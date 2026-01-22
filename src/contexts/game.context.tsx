@@ -30,7 +30,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           height: 4,
           tribesCount: 4,
           balance: balance,
-          logger: (entry) => dispatch({ type: 'LOG', entry: { ...entry, timestamp: new Date() } }),
+          logger: (entry) =>
+            dispatch({ type: 'LOG', entry: { ...entry, tick: state.board?.getStats().tick } }),
         }),
       });
   }, [balance, state.board]);

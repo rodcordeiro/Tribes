@@ -75,3 +75,7 @@ export const randomHexColor = (): string => {
     .padStart(6, '0');
   return `#${randomColor}`;
 };
+
+export function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}

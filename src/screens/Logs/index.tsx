@@ -13,8 +13,7 @@ export default function LogScreen() {
           .reverse()
           .map((log, idx) => (
             <Text key={`log_entry_${idx}`} style={[styles.base, styles[log.type]]}>
-              [{log.timestamp?.getHours()}:{log.timestamp?.getMinutes()}:
-              {log.timestamp?.getSeconds()}]{log.content}
+              [Tick {log.tick}]{log.content}
             </Text>
           ))}
       </ScrollView>

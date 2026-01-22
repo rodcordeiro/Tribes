@@ -35,6 +35,7 @@ export type GameBalance = {
     tribes: number;
   };
 };
+
 export const DEFAULT_BALANCE: GameBalance = {
   population: {
     initial: 30,

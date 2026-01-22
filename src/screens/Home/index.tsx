@@ -9,17 +9,17 @@ export default function HomeScreen() {
     state: { board, logs, speed, running },
     dispatch,
   } = useGame();
-  // flex-grow flex-row items-center justify-start
-  console.log(
-    board?.tribes
-      .map((tribe) => `[${tribe.name}]p: ${tribe.population} s: ${tribe.supplies}`)
-      .join('\n')
-  );
+
+  // console.log(
+  //   board?.tribes
+  //     .map((tribe) => `[${tribe.name}]p: ${tribe.population} s: ${tribe.supplies}`)
+  //     .join('\n')
+  // );
 
   return (
     <View className="flex flex-1">
       <View
-        className="mt-10  flex w-full flex-row items-center justify-end gap-2 px-3 py-2"
+        className="mb-10 mt-16 flex w-full flex-row items-center justify-end gap-2 px-3 py-2"
         // style={{ backgroundColor: 'green' }}
       >
         {board?.activeEvent && (
@@ -36,26 +36,6 @@ export default function HomeScreen() {
           <Text className="">
             {board?.ticks} <Feather name="clock" />
           </Text>
-        </View>
-        <View className="border-1 flex w-fit flex-row border-solid border-slate-400">
-          <Pressable
-            className="px-4 py-2"
-            onPress={() => dispatch({ type: 'SET_SPEED', speed: speed * 2 })}>
-            <Feather name="skip-back" />
-          </Pressable>
-          <Pressable
-            className="px-4 py-2"
-            onPress={() => dispatch({ type: running ? 'PAUSE' : 'RESUME' })}>
-            <Feather name={running ? 'pause' : 'play'} />
-          </Pressable>
-          <Pressable className="px-4 py-2" onPress={() => dispatch({ type: 'TICK' })}>
-            <Feather name="clock" />
-          </Pressable>
-          <Pressable
-            className="px-4 py-2"
-            onPress={() => dispatch({ type: 'SET_SPEED', speed: speed / 2 })}>
-            <Feather name="skip-forward" />
-          </Pressable>
         </View>
       </View>
       <ScrollView className="flex h-full w-full px-3">
@@ -88,6 +68,26 @@ export default function HomeScreen() {
               {log.content}
             </Text>
           ))}
+        </View>
+        <View className="mt-4 flex w-full flex-row items-center justify-center border-solid">
+          <Pressable
+            className="px-4 py-2"
+            onPress={() => dispatch({ type: 'SET_SPEED', speed: speed * 2 })}>
+            <Feather size={32} name="skip-back" />
+          </Pressable>
+          <Pressable
+            className="px-4 py-2"
+            onPress={() => dispatch({ type: running ? 'PAUSE' : 'RESUME' })}>
+            <Feather size={32} name={running ? 'pause' : 'play'} />
+          </Pressable>
+          <Pressable className="px-4 py-2" onPress={() => dispatch({ type: 'TICK' })}>
+            <Feather size={32} name="clock" />
+          </Pressable>
+          <Pressable
+            className="px-4 py-2"
+            onPress={() => dispatch({ type: 'SET_SPEED', speed: speed / 2 })}>
+            <Feather size={32} name="skip-forward" />
+          </Pressable>
         </View>
       </ScrollView>
     </View>
