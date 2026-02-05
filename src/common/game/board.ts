@@ -6,12 +6,11 @@ import {
   randomEnumValue,
   randomHexColor,
 } from '../utils';
+import { GameBalance } from './balance';
+import { TileType, TribeCore } from './enums';
+import { Events, GameEvent } from './events';
 import { Tile } from './tile';
 import { Tribe } from './tribe';
-import { TileType, TribeCore } from './enums';
-import { Balance, MIN_POPULATION_TO_DIVIDE } from '../contants';
-import { Events, GameEvent } from './events';
-import { GameBalance } from './balance';
 interface ActiveEvent {
   event: GameEvent;
   remaining: number;
