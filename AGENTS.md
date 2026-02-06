@@ -1,14 +1,16 @@
 ﻿# Repository Guidelines
 
 ## Project Description
-Tribes is an autonomous tribal strategy game inspired by Civilization. At startup, the game generates a board and spawns 4 tribes. On each tick (initially 1s), tribes interact with the world and with each other through a decision engine that can choose to move across the map, stay put, ally with other tribes, or go to war. Tribes that reach high population and resource thresholds can split into new tribes. The application is currently at version 1.0.0, and each release will add new functionality.
+Tribes is an autonomous tribal strategy game inspired by Civilization. At startup, the game generates a board and spawns 4 tribes. On each tick (initially 1s), tribes interact with the world and with each other through a decision engine that can choose to move across the map, stay put, ally with other tribes, or go to war. Tribes that reach high population and resource thresholds can split into new tribes. The application is currently at version 1.0.1, and each release will add new functionality.
 
-Current features (v1.0.0):
+Current features (v1.0.1):
 - Procedural board generation at initialization.
 - Spawn of 4 tribes at game start.
 - Tick-based simulation loop with initial tick duration of 1s.
 - Decision engine actions: move, stay, ally, or declare war.
 - Tribe splitting based on population and resource thresholds.
+- Tribes have a core (war, peace, exploration) that influences decisions, with archetypes per core that shape movement, stability, and production preferences.
+- Each tribe receives a random core and archetype, with a 2% chance per tick to change core (and archetype) dynamically.
 
 ## Project Structure & Module Organization
 - `src/app` contains Expo Router routes and layouts (e.g., `_layout.tsx`, `+not-found.tsx`, route groups like `(tabs)`).
