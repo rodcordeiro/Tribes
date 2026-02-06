@@ -6,6 +6,7 @@ import {
   randomEnumValue,
   randomHexColor,
 } from '../utils';
+import { ARCHETYPE_PRESETS } from '../contants';
 import { GameBalance } from './balance';
 import { TileType, TribeCore } from './enums';
 import { Events, GameEvent } from './events';
@@ -252,14 +253,15 @@ export class Board {
 
     const currentTile = this.getTileAt(tribe.position);
     const neighbors = this.getNeighborTiles(tribe.position);
+    const preferences = ARCHETYPE_PRESETS[tribe.archetype]?.preferences;
 
     if (!currentTile || neighbors.length === 0) return;
 
     let bestTile = currentTile;
-    let bestScore = this.evaluateTileSurvival(tribe, currentTile);
+    let bestScore = this.evaluateTileSurvival(tribe, currentTile, currentTile, preferences);
 
     for (const tile of neighbors) {
-      const score = this.evaluateTileSurvival(tribe, tile);
+      const score = this.evaluateTileSurvival(tribe, tile, currentTile, preferences);
 
       if (score > bestScore) {
         bestScore = score;
@@ -273,8 +275,16 @@ export class Board {
     }
   }
 
-  private evaluateTileSurvival(tribe: Tribe, tile: Tile): number {
+  private evaluateTileSurvival(
+    tribe: Tribe,
+    tile: Tile,
+    currentTile: Tile,
+    preferences?: { movement: number; stability: number; production: number }
+  ): number {
     let score = 1;
+    const prefs = preferences ?? { movement: 0.5, stability: 0.5, production: 0.5 };
+    const production = this.getProduction(tile);
+    const productionNorm = clamp(production / 5, 0, 1);
 
     // // 🌱 Fertilidade (produção)
     // score += tile.fertility * (1 - tribe.personality.fear);
@@ -285,6 +295,16 @@ export class Board {
     // 🧭 Preferência cultural
     if (tribe.core === 'exploration') {
       score += 0.2;
+    }
+
+    // Preferência por produção (mais forte em arquétipos exploradores)
+    score += productionNorm * (0.3 + prefs.production * 0.7);
+
+    // Estabilidade: favorece permanecer no tile atual
+    if (tile === currentTile) {
+      score += prefs.stability * 0.6;
+    } else {
+      score -= (1 - prefs.movement) * 0.4;
     }
 
     // if (tribe.core === 'peace' && tile.hostility > 0.5) {

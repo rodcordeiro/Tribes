@@ -24,3 +24,15 @@ export enum TribeCore {
   //   Prioriza terrenos não explorados
   Exploration = 'exploration',
 }
+
+export enum TribeArchetype {
+  Conquistador = 'conquistador',
+  Colonizador = 'colonizador',
+  Barbaro = 'barbaro',
+  Cartografo = 'cartografo',
+  Explorador = 'explorador',
+  Saqueador = 'saqueador',
+  Pacifista = 'pacifista',
+  Arcano = 'arcano',
+  Defensor = 'defensor',
+}

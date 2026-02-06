@@ -1,7 +1,7 @@
 import { v4 as uuid } from 'uuid';
-import { Balance, PERSONALITY_PRESETS } from '../contants';
-import { clamp, randomEnumValue } from '../utils';
-import { TribeCore } from './enums';
+import { ARCHETYPES_BY_CORE, ARCHETYPE_PRESETS, Balance, PERSONALITY_PRESETS } from '../contants';
+import { clamp, randomArrayItem, randomEnumValue } from '../utils';
+import { TribeArchetype, TribeCore } from './enums';
 
 export type TribePersonality = {
   aggression: number; // 0–1
@@ -16,6 +16,10 @@ export type TribeMemory = {
   migrations: number;
   lastTraumaTick?: number;
 };
+
+const getRandomArchetypeForCore = (core: TribeCore): TribeArchetype =>
+  randomArrayItem(ARCHETYPES_BY_CORE[core] as unknown as TribeArchetype[]);
+
 export class Tribe {
   public position!: Game.Position;
   public id!: string;
@@ -25,6 +29,7 @@ export class Tribe {
   public population!: number;
   public supplies!: number;
   public core!: TribeCore;
+  public archetype!: TribeArchetype;
   public personality!: TribePersonality;
 
   constructor({
@@ -35,6 +40,7 @@ export class Tribe {
     color,
     core = randomEnumValue(TribeCore),
     id,
+    archetype,
     personality,
   }: {
     id?: string;
@@ -44,6 +50,7 @@ export class Tribe {
     name: string;
     color: string;
     core: TribeCore;
+    archetype?: TribeArchetype;
     personality?: TribePersonality;
   }) {
     this.id = id ?? uuid();
@@ -53,9 +60,17 @@ export class Tribe {
     this.population = Math.floor(initialPopulation + initialPopulation * Math.random());
     this.supplies = Math.floor(initialSupplies + initialSupplies * Math.random());
     this.core = core;
-    this.personality = personality ?? this.generatePersonality(core);
+    this.archetype = archetype ?? getRandomArchetypeForCore(core);
+    this.personality = personality ?? this.generatePersonality(core, this.archetype);
   }
   clone(): Tribe {
+    const shouldChangeCore = Math.random() < 0.02;
+    const nextCore = shouldChangeCore ? randomEnumValue(TribeCore) : this.core;
+    const nextArchetype = shouldChangeCore ? getRandomArchetypeForCore(nextCore) : this.archetype;
+    const nextPersonality = shouldChangeCore
+      ? this.generatePersonality(nextCore, nextArchetype)
+      : this.personality;
+
     return new Tribe({
       id: this.id,
       initialPosition: { ...this.position },
@@ -63,8 +78,9 @@ export class Tribe {
       initialSupplies: this.supplies,
       name: this.name,
       color: this.color,
-      core: Math.random() < 0.02 ? randomEnumValue(TribeCore) : this.core,
-      personality: this.personality,
+      core: nextCore,
+      archetype: nextArchetype,
+      personality: nextPersonality,
     });
   }
   move(newPosition: Game.Position) {
@@ -83,8 +99,11 @@ export class Tribe {
     return clamp(base + (Math.random() * variance - variance / 2), 0, 1);
   }
 
-  generatePersonality(core: keyof typeof PERSONALITY_PRESETS): TribePersonality {
-    const base = PERSONALITY_PRESETS[core];
+  generatePersonality(
+    core: keyof typeof PERSONALITY_PRESETS,
+    archetype: TribeArchetype
+  ): TribePersonality {
+    const base = ARCHETYPE_PRESETS[archetype]?.personality ?? PERSONALITY_PRESETS[core];
     return {
       aggression: this.mutate(base.aggression),
       cooperation: this.mutate(base.cooperation),
