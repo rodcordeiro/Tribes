@@ -32,6 +32,9 @@ export class Tribe {
   public archetype!: TribeArchetype;
   public personality!: TribePersonality;
 
+  /**
+   * Creates a tribe with initial stats, core, and archetype.
+   */
   constructor({
     initialPosition,
     initialPopulation = Balance.population.initial,
@@ -63,6 +66,10 @@ export class Tribe {
     this.archetype = archetype ?? getRandomArchetypeForCore(core);
     this.personality = personality ?? this.generatePersonality(core, this.archetype);
   }
+
+  /**
+   * Clones the tribe and applies core change chance (2%) with new archetype/personality.
+   */
   clone(): Tribe {
     const shouldChangeCore = Math.random() < 0.02;
     const nextCore = shouldChangeCore ? randomEnumValue(TribeCore) : this.core;
@@ -83,22 +90,38 @@ export class Tribe {
       personality: nextPersonality,
     });
   }
+
+  /**
+   * Updates the tribe position.
+   */
   move(newPosition: Game.Position) {
     this.position = newPosition;
   }
 
+  /**
+   * Estimates threat posed by another tribe.
+   */
   evaluateThreat(self: Tribe, other: Tribe): number {
     return other.personality.aggression * 0.6 + (other.population / (self.population + 1)) * 0.4;
   }
 
+  /**
+   * Estimates cooperation opportunity between two tribes.
+   */
   evaluateOpportunity(self: Tribe, other: Tribe): number {
     return (self.personality.cooperation + other.personality.cooperation) / 2;
   }
 
+  /**
+   * Mutates a base trait by a random variance and clamps to [0, 1].
+   */
   mutate(base: number, variance = 0.15) {
     return clamp(base + (Math.random() * variance - variance / 2), 0, 1);
   }
 
+  /**
+   * Generates a personality based on core and archetype presets.
+   */
   generatePersonality(
     core: keyof typeof PERSONALITY_PRESETS,
     archetype: TribeArchetype
@@ -111,6 +134,10 @@ export class Tribe {
       expansionism: this.mutate(base.expansionism),
     };
   }
+
+  /**
+   * Applies a delta to a trait and clamps it to [0, 1].
+   */
   applyMemory(trait: number, delta: number) {
     return Math.min(1, Math.max(0, trait + delta));
   }

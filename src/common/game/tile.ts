@@ -5,11 +5,17 @@ export class Tile {
   public position: Game.Position = { x: -1, y: -1 };
   public tileType?: TileType;
 
+  /**
+   * Creates a tile at the given coordinates and assigns a random tile type.
+   */
   constructor({ x, y }: { board: Board; x: number; y: number }) {
     this.position = { x, y };
     this.getTileType();
   }
 
+  /**
+   * Randomly assigns a tile type using weighted thresholds.
+   */
   private getTileType() {
     const d100 = Math.floor(Math.random() * 100);
     if (d100 > 90) {

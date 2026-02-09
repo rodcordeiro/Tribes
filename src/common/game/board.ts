@@ -12,10 +12,12 @@ import { TileType, TribeCore } from './enums';
 import { Events, GameEvent } from './events';
 import { Tile } from './tile';
 import { Tribe } from './tribe';
+
 interface ActiveEvent {
   event: GameEvent;
   remaining: number;
 }
+
 export class Board {
   public MAX_HEIGHT?: number;
   public MAX_WIDTH?: number;
@@ -28,6 +30,9 @@ export class Board {
   private balance: GameBalance;
   public globalProductionModifier = 0;
 
+  /**
+   * Creates a new game board with tiles and initial tribes.
+   */
   constructor({
     tribesCount = 2,
     width = 10,
@@ -70,6 +75,9 @@ export class Board {
     this.balance = balance;
   }
 
+  /**
+   * Returns aggregated stats for the current simulation state.
+   */
   getStats() {
     const totalPopulation = this.tribes.reduce((sum, t) => sum + t.population, 0);
 
@@ -83,6 +91,9 @@ export class Board {
     };
   }
 
+  /**
+   * Creates a shallow clone of the board state.
+   */
   clone(): Board {
     const board = new Board({
       width: this.MAX_WIDTH!,
@@ -93,7 +104,7 @@ export class Board {
     });
 
     board.tiles = this.tiles; //this.tiles.map((t) => t.clone());
-    board.tribes = this.tribes; // this.tribes.map((t) => t.clone());
+    board.tribes = this.tribes.map((t) => t.clone());
     board.ticks = this.ticks;
     board.ticksDelayInMs = this.ticksDelayInMs;
     board.activeEvent = this.activeEvent;
@@ -101,6 +112,9 @@ export class Board {
     return board;
   }
 
+  /**
+   * Advances the simulation by one tick and returns the new board.
+   */
   tick(): Board {
     const next = this.clone();
     next.ticks++;
@@ -153,6 +167,9 @@ export class Board {
     return next;
   }
 
+  /**
+   * Determines the next action for a tribe based on nearby tribes and core.
+   */
   decideAction(tribe: Tribe, nextBoard: Board) {
     const nearby = this.getNearbyTribes(tribe, tribe.personality.expansionism > 0.75 ? 2 : 1);
     if (nearby.length === 0) {
@@ -183,6 +200,10 @@ export class Board {
 
     return this.decideExploration(tribe);
   }
+
+  /**
+   * Returns tribes within the given Manhattan range of the provided tribe.
+   */
   getNearbyTribes(tribe: Tribe, range = 1): Tribe[] {
     return this.tribes.filter((other) => {
       if (other === tribe || !other.position || !tribe.position) return false;
@@ -194,16 +215,34 @@ export class Board {
     });
   }
 
+  /**
+   * Moves a tribe away from a threat, clamping to valid board bounds.
+   */
   flee(tribe: Tribe, threat: Tribe) {
     const dx = tribe.position!.x - threat.position!.x;
     const dy = tribe.position!.y - threat.position!.y;
 
-    tribe.move({
+    const target = {
       x: tribe.position!.x + Math.sign(dx),
       y: tribe.position!.y + Math.sign(dy),
+    };
+
+    if (this.isValidPosition(target)) {
+      tribe.move(target);
+      return;
+    }
+
+    const maxX = Math.max(0, (this.MAX_WIDTH ?? 1) - 1);
+    const maxY = Math.max(0, (this.MAX_HEIGHT ?? 1) - 1);
+    tribe.move({
+      x: clamp(target.x, 0, maxX),
+      y: clamp(target.y, 0, maxY),
     });
   }
 
+  /**
+   * Resolves combat between attacker and defender and updates their stats.
+   */
   attack(attacker: Tribe, defender: Tribe) {
     const powerA = attacker.population * attacker.personality.aggression;
     const powerD = defender.population * (1 - defender.personality.fear);
@@ -233,6 +272,9 @@ export class Board {
     }
   }
 
+  /**
+   * Merges two tribes into a new one on the provided board.
+   */
   mergeTribes(a: Tribe, b: Tribe, nextBoard: Board) {
     const newPop = Math.floor((a.population + b.population) * 0.6);
 
@@ -248,6 +290,10 @@ export class Board {
       })
     );
   }
+
+  /**
+   * Chooses whether the tribe should move to a neighboring tile.
+   */
   decideExploration(tribe: Tribe) {
     if (!tribe.position) return;
 
@@ -275,6 +321,9 @@ export class Board {
     }
   }
 
+  /**
+   * Evaluates how suitable a tile is for survival and movement decisions.
+   */
   private evaluateTileSurvival(
     tribe: Tribe,
     tile: Tile,
@@ -314,6 +363,9 @@ export class Board {
     return score;
   }
 
+  /**
+   * Returns valid neighboring tiles around a position.
+   */
   public getNeighborTiles(pos: Game.Position): Tile[] {
     const dirs = [
       { x: 1, y: 0 },
@@ -329,118 +381,16 @@ export class Board {
       .filter(Boolean) as Tile[];
   }
 
+  /**
+   * Checks if a position is within board bounds.
+   */
   public isValidPosition(pos: Game.Position) {
     return pos.x >= 0 && pos.y >= 0 && pos.x < this.MAX_WIDTH! && pos.y < this.MAX_HEIGHT!;
   }
 
-  // tick(): Board {
-  //   const next = this.clone();
-  //   next.ticks++;
-
-  //   next.tribes = next.tribes
-  //     .map((tribe) => {
-  //       if (Math.random() < 0.1) {
-  //         this.moveTribe(tribe, next);
-  //       }
-  //       if (!tribe.position) return tribe;
-
-  //       if (tribe.core === TribeCore.Exploration && next.isEnemyNearby(tribe)) {
-  //         return next.fleeFromWar(tribe);
-  //       }
-
-  //       const tile = next.getTileAt(tribe.position);
-  //       if (!tile) {
-  //         return tribe;
-  //       }
-
-  //       const shouldMigrate = this.shouldMigrate(tribe, this.getTileAt(tribe.position));
-
-  //       if (shouldMigrate) {
-  //         const target = this.chooseMigrationTile(tribe.position);
-  //         if (!target || !target.position) return tribe;
-  //         if (target) {
-  //           if (target.tileType === TileType.WaterTile) return tribe;
-
-  //           const hasBiggerProduction = this.getProduction(target) > this.getProduction(tile);
-  //           if (hasBiggerProduction) {
-  //             const threshold =
-  //               this.balance.population.minToDivide +
-  //               this.balance.core[tribe.core].divisionThresholdModifier;
-
-  //             if (tribe.population > threshold) {
-  //               const migratingPop = Math.floor(tribe.population * 0.3);
-
-  //               tribe.population -= migratingPop;
-  //               next.logger({ type: 'Marriage', content: `Uma nova tribo nasce de ${tribe.name}` });
-  //               next.tribes.push(
-  //                 new Tribe({
-  //                   initialPosition: target.position,
-  //                   initialPopulation: migratingPop,
-  //                   initialSupplies: Math.floor(tribe.supplies * 0.3),
-  //                   name: getTribeName(),
-  //                   color: randomHexColor(),
-  //                   core: Math.random() > 0.05 ? tribe.core : randomEnumValue(TribeCore),
-  //                 })
-  //               );
-  //             } else {
-  //               tribe.move(target.position);
-  //             }
-  //           }
-  //         }
-  //       }
-
-  //       return tribe;
-  //     })
-  //     .map((tribe) => {
-  //       if (this.ticks % 5 !== 0) return tribe;
-  //       const tile = next.getTileAt(tribe.position);
-  //       return next.processEconomy(tribe, tile);
-  //     })
-  //     .filter(Boolean) as Tribe[];
-
-  //   const should_new_tribe_appear = Math.random();
-  //   if (should_new_tribe_appear < 0.02) {
-  //     const newTribe = new Tribe({
-  //       initialPosition: {
-  //         x: getRandomIntInclusive(0, next.MAX_WIDTH ?? 0),
-  //         y: getRandomIntInclusive(0, next.MAX_HEIGHT ?? 0),
-  //       },
-  //       name: getTribeName(),
-  //       color: randomHexColor(),
-  //       core: randomEnumValue(TribeCore),
-  //     });
-  //     next.tribes.push(newTribe);
-  //     next.logger({ type: 'Info', content: `Tribe ${newTribe.name} has begun` });
-  //   }
-
-  //   // combate
-  //   const conflicts = next.detectConflicts(next.tribes);
-
-  //   next.tribes = [];
-
-  //   for (const group of conflicts.values()) {
-  //     const cores = new Set(group.map((t) => t.core));
-
-  //     if (cores.has(TribeCore.War)) {
-  //       next.tribes.push(next.handleWar(group));
-  //     } else if (cores.has(TribeCore.Peace)) {
-  //       next.tribes.push(...next.handlePeace(group));
-  //     } else {
-  //       next.tribes.push(group[0]);
-  //     }
-  //   }
-  //   if (next.activeEvent) {
-  //     next.activeEvent.remaining--;
-
-  //     if (next.activeEvent.remaining <= 0) {
-  //       next.activeEvent.event.revert(next);
-  //       next.activeEvent = undefined;
-  //     }
-  //   } else {
-  //     next.tryTriggerEvent();
-  //   }
-  //   return next;
-  // }
+  /**
+   * Attempts to trigger a random global event.
+   */
   private tryTriggerEvent() {
     if (this.activeEvent) return;
     if (Math.random() > 0.05) return; // 5%
@@ -455,10 +405,16 @@ export class Board {
     event.apply(this);
   }
 
+  /**
+   * Returns the tile at a given position.
+   */
   public getTileAt(position: Game.Position) {
     return this.tiles[position.x][position.y];
   }
 
+  /**
+   * Processes economy effects for a tribe on a tile.
+   */
   private processEconomy(tribe: Tribe, tile: Tile) {
     const t = tribe.clone();
 
@@ -491,11 +447,14 @@ export class Board {
     return t;
   }
 
+  /**
+   * Returns adjacent tiles (up, right, down, left).
+   */
   private getAdjacentTiles(pos: Game.Position): Tile[] {
     const directions = [
+      { x: 0, y: 1 },
       { x: 0, y: -1 },
       { x: 1, y: 0 },
-      { x: 0, y: 1 },
       { x: -1, y: 0 },
     ];
 
@@ -504,10 +463,16 @@ export class Board {
       .filter(Boolean);
   }
 
+  /**
+   * Checks if a tile is coastal (adjacent to water).
+   */
   private isCoastal(tile: Tile): boolean {
     return this.getAdjacentTiles(tile.position).some((t) => t.tileType === TileType.WaterTile);
   }
 
+  /**
+   * Calculates base production for a tile, including global modifiers.
+   */
   private getProduction(tile: Tile): number {
     let base = 0;
 
