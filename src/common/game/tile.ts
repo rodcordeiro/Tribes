@@ -4,6 +4,7 @@ import { TileType } from './enums';
 export class Tile {
   public position: Game.Position = { x: -1, y: -1 };
   public tileType?: TileType;
+  public warMemory: number = 0;
 
   /**
    * Creates a tile at the given coordinates and assigns a random tile type.
@@ -28,5 +29,20 @@ export class Tile {
       this.tileType = TileType.LandTile;
     }
     return;
+  }
+
+  /**
+   * Marks this tile as a recent war location.
+   */
+  public recordWar() {
+    this.warMemory = 1;
+  }
+
+  /**
+   * Gradually fades war memory over time.
+   */
+  public decayWarMemory() {
+    if (this.warMemory <= 0) return;
+    this.warMemory = Math.max(0, this.warMemory - 0.1);
   }
 }

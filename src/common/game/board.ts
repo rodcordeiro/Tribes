@@ -154,6 +154,8 @@ export class Board {
       }
     });
 
+    next.decayTileMemories();
+
     if (next.activeEvent) {
       next.activeEvent.remaining--;
 
@@ -246,6 +248,11 @@ export class Board {
   attack(attacker: Tribe, defender: Tribe) {
     const powerA = attacker.population * attacker.personality.aggression;
     const powerD = defender.population * (1 - defender.personality.fear);
+
+    const warTile = this.getTileAt(attacker.position);
+    if (warTile) {
+      warTile.recordWar();
+    }
 
     if (powerA > powerD) {
       defender.population *= 0.7;
@@ -346,6 +353,11 @@ export class Board {
       score += 0.2;
     }
 
+    // Tribos de paz evitam tiles com memória de guerra
+    if (tribe.core === 'peace' && tile.warMemory > 0) {
+      score -= 0.6 * tile.warMemory;
+    }
+
     // Preferência por produção (mais forte em arquétipos exploradores)
     score += productionNorm * (0.3 + prefs.production * 0.7);
 
@@ -403,6 +415,17 @@ export class Board {
     };
     this.logger({ type: 'Info', content: `Evento ${event.name} iniciado!` });
     event.apply(this);
+  }
+
+  /**
+   * Applies war memory decay to all tiles each tick.
+   */
+  private decayTileMemories() {
+    this.tiles.forEach((row) => {
+      row.forEach((tile) => {
+        tile.decayWarMemory();
+      });
+    });
   }
 
   /**
@@ -490,6 +513,16 @@ export class Board {
         break;
     }
 
-    return base + this.globalProductionModifier;
+    let production = base + this.globalProductionModifier;
+    const nearbyWarTiles = this.getAdjacentTiles(tile.position).filter((t) => t.warMemory > 0);
+    if (nearbyWarTiles.length > 0) {
+      const warImpact = clamp(
+        nearbyWarTiles.reduce((sum, t) => sum + t.warMemory, 0) / nearbyWarTiles.length,
+        0,
+        1
+      );
+      production *= 1 - warImpact * 0.5;
+    }
+    return production;
   }
 }
