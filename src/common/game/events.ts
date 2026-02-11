@@ -1,4 +1,4 @@
-import { Board } from "./board";
+import { Board } from './board';
 
 export type GameEvent = {
   name: string;
@@ -32,9 +32,7 @@ export const Events: GameEvent[] = [
     name: 'Peste',
     duration: 3,
     apply: (board) => {
-      board.tribes.forEach(
-        (t) => (t.population = Math.floor(t.population * 0.7))
-      );
+      board.tribes.forEach((t) => (t.population = Math.floor(t.population * 0.7)));
     },
     revert: () => {},
   },

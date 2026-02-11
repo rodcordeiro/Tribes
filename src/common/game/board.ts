@@ -563,11 +563,7 @@ export class Board {
     if (tribe.supplies < this.balance.city.minSupplies) return;
 
     const production = this.getProduction(tile);
-    const chance = clamp(
-      tribe.personality.expansionism * 0.6 + (production / 6) * 0.4,
-      0,
-      1
-    );
+    const chance = clamp(tribe.personality.expansionism * 0.6 + (production / 6) * 0.4, 0, 1);
     if (Math.random() > chance) return;
 
     tile.city = {

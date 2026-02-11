@@ -3,13 +3,8 @@
     "name": "Tribes",
     "slug": "Tribes",
     "scheme": "tribes",
-    "platforms": [
-      "ios",
-      "android"
-    ],
-    "plugins": [
-      "expo-router"
-    ],
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true,
       "tsconfigPaths": true
@@ -22,9 +17,7 @@
       "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
