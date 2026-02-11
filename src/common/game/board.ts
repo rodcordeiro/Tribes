@@ -465,15 +465,16 @@ export class Board {
     t.supplies += production;
 
     // CONSUMO
-    t.supplies -= Math.round(t.population * this.balance.supplies.consumptionPerPop);
+    const consumption = Math.round(t.population * this.balance.supplies.consumptionPerPop);
+    t.supplies -= consumption;
 
     // CRESCIMENTO / FOME
-    if (t.supplies >= 1) {
+    if (production > consumption && t.supplies >= 1) {
       // crescimento lento
       const growthRate = this.balance.population.growthRate + this.balance.core[t.core].growthBonus;
 
       t.population += Math.floor(t.population * growthRate);
-    } else {
+    } else if (t.supplies < 1) {
       // fome
       t.population -= Math.ceil(
         Math.max(1, Math.abs(t.supplies) * this.balance.population.starvationLossRate)
