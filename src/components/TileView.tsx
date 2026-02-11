@@ -22,13 +22,13 @@ export const TileView = React.memo(
       <View
         className={`flex min-h-20 w-20 min-w-20 flex-1 px-3 py-2 `}
         style={[tileStyles.base, tileStyles[tile.tileType!]]}>
-        <Image
+        {/* <Image
           source={images[tile.tileType as unknown as keyof typeof images]}
           className="-z-1 absolute h-full  w-20"
           style={{
             ...StyleSheet.absoluteFillObject,
           }}
-        />
+        /> */}
         {warOverlayOpacity > 0 && (
           <View
             pointerEvents="none"
@@ -38,7 +38,13 @@ export const TileView = React.memo(
         {tile.roadLevel > 0 && (
           <View
             pointerEvents="none"
-            style={[tileStyles.road, { opacity: Math.min(1, tile.roadLevel) }]}
+            style={[
+              tileStyles.road,
+              {
+                opacity: Math.min(1, tile.roadLevel),
+                backgroundColor: tile.roadColor ?? tileStyles.road.backgroundColor,
+              },
+            ]}
           />
         )}
         {tile.city && (

@@ -602,6 +602,8 @@ export class Board {
       0,
       this.balance.roads.maxLevel
     );
+    tile.roadOwnerId = tribe.id;
+    tile.roadColor = tribe.color;
     tribe.supplies = Math.max(0, tribe.supplies - this.balance.roads.buildCostSupplies);
     this.logger({ type: 'Info', content: `${tribe.name} built a road segment.` });
   }

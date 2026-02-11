@@ -15,6 +15,8 @@ export class Tile {
   public warMemory: number = 0;
   public city?: City;
   public roadLevel: number = 0;
+  public roadOwnerId?: string;
+  public roadColor?: string;
 
   /**
    * Creates a tile at the given coordinates and assigns a random tile type.
