@@ -1,9 +1,9 @@
 ﻿# Repository Guidelines
 
 ## Project Description
-Tribes is an autonomous tribal strategy game inspired by Civilization. At startup, the game generates a board and spawns 4 tribes. On each tick (initially 1s), tribes interact with the world and with each other through a decision engine that can choose to move across the map, stay put, ally with other tribes, or go to war. Tribes that reach high population and resource thresholds can split into new tribes. The application is currently at version 1.2, and each release will add new functionality.
+Tribes is an autonomous tribal strategy game inspired by Civilization. At startup, the game generates a board and spawns 4 tribes. On each tick (initially 1s), tribes interact with the world and with each other through a decision engine that can choose to move across the map, stay put, ally with other tribes, or go to war. Tribes that reach high population and resource thresholds can split into new tribes. The application is currently at version 1.1.0, and each release will add new functionality.
 
-Current features (v1.2):
+Current features (v1.1.0):
 - Procedural board generation at initialization.
 - Spawn of 4 tribes at game start.
 - Tick-based simulation loop with initial tick duration of 1s.
@@ -34,6 +34,7 @@ Current features (v1.2):
 - `pnpm build:dev`, `pnpm build:preview`, `pnpm build:prod` run EAS builds for each profile.
 - `pnpm lint` checks ESLint + Prettier formatting.
 - `pnpm format` fixes ESLint issues and formats with Prettier.
+- `pnpm release` runs `commit-and-tag-version` to update the changelog.
 
 ## Coding Style & Naming Conventions
 - Indentation: 2 spaces, `singleQuote: true`, `printWidth: 100`, `trailingComma: es5`.
@@ -47,6 +48,9 @@ Current features (v1.2):
 ## Commit & Pull Request Guidelines
 - Use Conventional Commits (e.g., `feat: add onboarding screen`, `fix: handle null user`).
 - PRs should include a brief description. Screenshots are optional and encouraged for UI changes.
+- Changelog updates are managed via `commit-and-tag-version` and saved to `CHANGELOG.md`.
+- Husky runs `lint-staged` on `pre-commit` to enforce formatting/lint on staged files.
+- After every change, run `pnpm release` to increment the version, and update `AGENTS.md` with the correct version.
 
 ## Configuration Notes
 - Key config files: `app.json`, `eas.json`, `eslint.config.js`, `prettier.config.js`, `tailwind.config.js`.
