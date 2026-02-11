@@ -149,6 +149,7 @@ export class Board {
     next.tribes.forEach((tribe) => {
       try {
         this.decideAction(tribe, next);
+        next.applySettlementAndInfrastructure(tribe);
       } catch (e) {
         console.error(e);
       }
@@ -249,7 +250,8 @@ export class Board {
     const powerA = attacker.population * attacker.personality.aggression;
     const powerD = defender.population * (1 - defender.personality.fear);
 
-    const warTile = this.getTileAt(attacker.position);
+    const battlePosition = defender.position ?? attacker.position;
+    const warTile = this.getTileAt(battlePosition);
     if (warTile) {
       warTile.recordWar();
     }
@@ -264,6 +266,10 @@ export class Board {
       );
       defender.personality.fear = defender.applyMemory(defender.personality.fear, +0.2);
       defender.personality.cooperation = defender.applyMemory(defender.personality.fear, -0.1);
+
+      if (warTile?.city) {
+        this.resolveCityAfterBattle(attacker, defender, warTile, powerA, powerD);
+      }
 
       this.logger({ type: 'War', content: `${attacker.name} wins over ${defender.name} at war!` });
     } else {
@@ -361,6 +367,14 @@ export class Board {
     // Preferência por produção (mais forte em arquétipos exploradores)
     score += productionNorm * (0.3 + prefs.production * 0.7);
 
+    if (tile.city?.ownerTribeId === tribe.id) {
+      score += 0.6;
+    }
+
+    if (tile.roadLevel > 0) {
+      score += tile.roadLevel * (0.2 + prefs.stability * 0.1);
+    }
+
     // Estabilidade: favorece permanecer no tile atual
     if (tile === currentTile) {
       score += prefs.stability * 0.6;
@@ -442,7 +456,12 @@ export class Board {
     const t = tribe.clone();
 
     // PRODUÇÃO baseada no terreno
-    const production = this.getProduction(tile);
+    let production = this.getProduction(tile);
+    if (tile.city?.ownerTribeId === t.id) {
+      production += this.balance.city.productionBonus;
+      const growth = Math.max(1, Math.floor(tile.city.population * this.balance.city.growthRate));
+      tile.city.population += growth;
+    }
     t.supplies += production;
 
     // CONSUMO
@@ -514,6 +533,9 @@ export class Board {
     }
 
     let production = base + this.globalProductionModifier;
+    if (tile.roadLevel > 0) {
+      production += tile.roadLevel * this.balance.roads.productionBonusPerLevel;
+    }
     const nearbyWarTiles = this.getAdjacentTiles(tile.position).filter((t) => t.warMemory > 0);
     if (nearbyWarTiles.length > 0) {
       const warImpact = clamp(
@@ -524,5 +546,98 @@ export class Board {
       production *= 1 - warImpact * 0.5;
     }
     return production;
+  }
+
+  private applySettlementAndInfrastructure(tribe: Tribe) {
+    if (!tribe.position) return;
+    const tile = this.getTileAt(tribe.position);
+    if (!tile) return;
+    this.tryFoundCity(tribe, tile);
+    this.tryBuildRoad(tribe, tile);
+  }
+
+  private tryFoundCity(tribe: Tribe, tile: Tile) {
+    if (tile.city) return;
+    if (tile.tileType === TileType.WaterTile || tile.tileType === TileType.Mountain) return;
+    if (tribe.population < this.balance.city.minPopulation) return;
+    if (tribe.supplies < this.balance.city.minSupplies) return;
+
+    const production = this.getProduction(tile);
+    const chance = clamp(
+      tribe.personality.expansionism * 0.6 + (production / 6) * 0.4,
+      0,
+      1
+    );
+    if (Math.random() > chance) return;
+
+    tile.city = {
+      id: `city-${tribe.id}-${this.ticks}`,
+      name: `City of ${tribe.name}`,
+      ownerTribeId: tribe.id,
+      population: Math.max(1, Math.floor(tribe.population * 0.2)),
+      foundedTick: this.ticks,
+    };
+
+    tribe.population = Math.max(1, tribe.population - this.balance.city.foundingCostPopulation);
+    tribe.supplies = Math.max(0, tribe.supplies - this.balance.city.foundingCostSupplies);
+
+    this.logger({ type: 'Info', content: `${tribe.name} founded ${tile.city.name}` });
+  }
+
+  private tryBuildRoad(tribe: Tribe, tile: Tile) {
+    if (tile.tileType === TileType.WaterTile || tile.tileType === TileType.Mountain) return;
+    if (tile.roadLevel >= this.balance.roads.maxLevel) return;
+    if (tribe.supplies < this.balance.roads.buildCostSupplies) return;
+
+    const cityBonus = tile.city?.ownerTribeId === tribe.id ? 0.2 : 0;
+    const chance = clamp(
+      tribe.personality.expansionism * this.balance.roads.buildChance + cityBonus,
+      0,
+      1
+    );
+    if (Math.random() > chance) return;
+
+    tile.roadLevel = clamp(
+      tile.roadLevel + this.balance.roads.levelGain,
+      0,
+      this.balance.roads.maxLevel
+    );
+    tribe.supplies = Math.max(0, tribe.supplies - this.balance.roads.buildCostSupplies);
+    this.logger({ type: 'Info', content: `${tribe.name} built a road segment.` });
+  }
+
+  private resolveCityAfterBattle(
+    attacker: Tribe,
+    defender: Tribe,
+    tile: Tile,
+    powerA: number,
+    powerD: number
+  ) {
+    if (!tile.city || tile.city.ownerTribeId !== defender.id) return;
+
+    const dominance = clamp(powerA / (powerD + 1), 0, 2);
+    const conquestChance = clamp(0.2 + dominance * 0.3 + this.balance.city.defenseBase, 0, 0.8);
+
+    if (Math.random() < conquestChance) {
+      tile.city.ownerTribeId = attacker.id;
+      tile.city.population = Math.max(1, Math.floor(tile.city.population * 0.8));
+      this.logger({
+        type: 'War',
+        content: `${attacker.name} conquered ${tile.city.name}`,
+      });
+      return;
+    }
+
+    const raidLoot = Math.max(
+      1,
+      Math.floor(defender.supplies * this.balance.city.raidSuppliesRate)
+    );
+    defender.supplies = Math.max(0, defender.supplies - raidLoot);
+    attacker.supplies += raidLoot;
+    tile.city.population = Math.max(1, Math.floor(tile.city.population * 0.9));
+    this.logger({
+      type: 'War',
+      content: `${attacker.name} raided ${tile.city.name} and stole supplies.`,
+    });
   }
 }

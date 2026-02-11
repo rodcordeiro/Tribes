@@ -1,10 +1,20 @@
 import { Board } from './board';
 import { TileType } from './enums';
 
+export type City = {
+  id: string;
+  name: string;
+  ownerTribeId: string;
+  population: number;
+  foundedTick: number;
+};
+
 export class Tile {
   public position: Game.Position = { x: -1, y: -1 };
   public tileType?: TileType;
   public warMemory: number = 0;
+  public city?: City;
+  public roadLevel: number = 0;
 
   /**
    * Creates a tile at the given coordinates and assigns a random tile type.

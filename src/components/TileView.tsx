@@ -16,6 +16,17 @@ export const TileView = React.memo(
             style={[tileStyles.warOverlay, { opacity: warOverlayOpacity }]}
           />
         )}
+        {tile.roadLevel > 0 && (
+          <View
+            pointerEvents="none"
+            style={[tileStyles.road, { opacity: Math.min(1, tile.roadLevel) }]}
+          />
+        )}
+        {tile.city && (
+          <View style={tileStyles.cityBadge}>
+            <Text style={tileStyles.cityText}>C</Text>
+          </View>
+        )}
         <View>
           <Text>X:{tile.position.x}</Text>
           <Text>Y:{tile.position.y}</Text>
@@ -38,5 +49,29 @@ const tileStyles = StyleSheet.create({
   warOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'red',
+  },
+  road: {
+    position: 'absolute',
+    left: 4,
+    right: 4,
+    bottom: 4,
+    height: 2,
+    backgroundColor: '#6b4e2e',
+  },
+  cityBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    height: 16,
+    width: 16,
+    borderRadius: 4,
+    backgroundColor: '#1f2933',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cityText: {
+    color: '#f5f7fa',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

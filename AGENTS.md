@@ -1,9 +1,9 @@
 ﻿# Repository Guidelines
 
 ## Project Description
-Tribes is an autonomous tribal strategy game inspired by Civilization. At startup, the game generates a board and spawns 4 tribes. On each tick (initially 1s), tribes interact with the world and with each other through a decision engine that can choose to move across the map, stay put, ally with other tribes, or go to war. Tribes that reach high population and resource thresholds can split into new tribes. The application is currently at version 1.0.3, and each release will add new functionality.
+Tribes is an autonomous tribal strategy game inspired by Civilization. At startup, the game generates a board and spawns 4 tribes. On each tick (initially 1s), tribes interact with the world and with each other through a decision engine that can choose to move across the map, stay put, ally with other tribes, or go to war. Tribes that reach high population and resource thresholds can split into new tribes. The application is currently at version 1.2, and each release will add new functionality.
 
-Current features (v1.0.3):
+Current features (v1.2):
 - Procedural board generation at initialization.
 - Spawn of 4 tribes at game start.
 - Tick-based simulation loop with initial tick duration of 1s.
@@ -13,6 +13,9 @@ Current features (v1.0.3):
 - Each tribe receives a random core and archetype, with a 2% chance per tick to change core (and archetype) dynamically.
 - Flee movement validates board bounds to prevent tribes from leaving the map.
 - Tiles keep a fading memory of wars (10 ticks) that peace tribes avoid, with a red overlay and productivity impact on adjacent tiles.
+- Cities can be founded on suitable tiles and grow over time when occupied.
+- Battles on city tiles can lead to conquest or raids that steal supplies and reduce city population.
+- Tribes can build basic road infrastructure that boosts local production and is visible on tiles.
 
 ## Project Structure & Module Organization
 - `src/app` contains Expo Router routes and layouts (e.g., `_layout.tsx`, `+not-found.tsx`, route groups like `(tabs)`).

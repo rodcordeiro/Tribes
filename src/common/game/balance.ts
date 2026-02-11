@@ -34,6 +34,23 @@ export type GameBalance = {
     height: number;
     tribes: number;
   };
+  city: {
+    minPopulation: number;
+    minSupplies: number;
+    foundingCostSupplies: number;
+    foundingCostPopulation: number;
+    growthRate: number;
+    productionBonus: number;
+    defenseBase: number;
+    raidSuppliesRate: number;
+  };
+  roads: {
+    buildChance: number;
+    buildCostSupplies: number;
+    maxLevel: number;
+    levelGain: number;
+    productionBonusPerLevel: number;
+  };
 };
 
 export const DEFAULT_BALANCE: GameBalance = {
@@ -70,5 +87,22 @@ export const DEFAULT_BALANCE: GameBalance = {
     width: 4,
     height: 4,
     tribes: 4,
+  },
+  city: {
+    minPopulation: 40,
+    minSupplies: 50,
+    foundingCostSupplies: 25,
+    foundingCostPopulation: 5,
+    growthRate: 0.04,
+    productionBonus: 2,
+    defenseBase: 0.2,
+    raidSuppliesRate: 0.35,
+  },
+  roads: {
+    buildChance: 0.5,
+    buildCostSupplies: 8,
+    maxLevel: 1,
+    levelGain: 1,
+    productionBonusPerLevel: 0.5,
   },
 };
