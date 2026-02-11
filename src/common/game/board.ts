@@ -104,7 +104,7 @@ export class Board {
     });
 
     board.tiles = this.tiles; //this.tiles.map((t) => t.clone());
-    board.tribes = this.tribes.map((t) => t.clone());
+    board.tribes = this.tribes; //this.tribes.map((t) => t.clone());
     board.ticks = this.ticks;
     board.ticksDelayInMs = this.ticksDelayInMs;
     board.activeEvent = this.activeEvent;

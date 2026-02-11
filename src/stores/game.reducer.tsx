@@ -60,7 +60,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, speed: action.speed };
     case 'LOG':
       // console.debug(action.entry);
-      return { ...state, logs: [...state.logs, action.entry] };
+      return { ...state, logs: [...state.logs, action.entry].slice(-50) };
 
     default:
       return state;

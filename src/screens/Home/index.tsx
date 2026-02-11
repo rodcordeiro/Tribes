@@ -39,12 +39,12 @@ export default function HomeScreen() {
           </View>
         </View>
       </View>
-      <ScrollView className="flex h-full w-full px-3">
-        {board?.tiles.map((row, x) => (
-          <View key={`board_row_${x}`} className="flex flex-row">
-            {row.map((tile, y) => (
+      <ScrollView className="h-full w-full px-3">
+        {board?.tiles.map((row, y) => (
+          <View key={`board_row_${y}`} className="flex flex-row">
+            {row.map((tile, x) => (
               <TileView
-                key={`tile_${x}_${y}`}
+                key={`tile_${y}_${x}`}
                 tile={tile}
                 size={(board.MAX_HEIGHT ?? 1) * (board.MAX_WIDTH ?? 1)}>
                 {board.tribes?.find(

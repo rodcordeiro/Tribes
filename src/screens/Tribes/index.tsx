@@ -12,6 +12,7 @@ import { clsx } from 'clsx';
 import { useEffect, useState } from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
 import { useGame } from '../../contexts/game.context';
+
 const images = {
   arcano,
   barbaro,
@@ -23,6 +24,7 @@ const images = {
   defensor,
   saqueador,
 };
+
 function TribeView({ tribe, position }: { tribe: Tribe; position: number }) {
   return (
     <View className={`flex h-fit w-fit max-w-md rounded bg-red-200 px-3 py-2`}>

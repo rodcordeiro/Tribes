@@ -1,9 +1,11 @@
 ﻿# Repository Guidelines
 
 ## Project Description
+
 Tribes is an autonomous tribal strategy game inspired by Civilization. At startup, the game generates a board and spawns 4 tribes. On each tick (initially 1s), tribes interact with the world and with each other through a decision engine that can choose to move across the map, stay put, ally with other tribes, or go to war. Tribes that reach high population and resource thresholds can split into new tribes. The application is currently at version 1.1.0, and each release will add new functionality.
 
 Current features (v1.1.0):
+
 - Procedural board generation at initialization.
 - Spawn of 4 tribes at game start.
 - Tick-based simulation loop with initial tick duration of 1s.
@@ -17,7 +19,54 @@ Current features (v1.1.0):
 - Battles on city tiles can lead to conquest or raids that steal supplies and reduce city population.
 - Tribes can build basic road infrastructure that boosts local production and is visible on tiles.
 
+## Próximos passos
+
+**Versão 1.1.0 — Cidades e infraestrutura**
+
+- Cidades
+- Estradas/rotas e infraestrutura
+**Versão 1.1.1 — Cidades e infraestrutura**
+- As rotas foram geradas por uma tribo, portanto devem ter a cor da tribo
+**Versão 1.1.2 — Cidades e infraestrutura**
+- Caso a rota ultrapasse mais de um tile, esta rota deve ser interligada.
+
+**Versão 1.2.0 — Economia de recursos**
+
+- Economia multi-recurso (comida, metal, conhecimento)
+- Mineração em montanha
+- Bibliotecas geram conhecimento. As bibliotecas devem ser construidas nas cidades e como requisito, a tribo deve possuir ao menos 3 cidades para construir uma biblioteca.
+
+**Versão 1.3.0 — Tecnologia e eras**
+
+- Sistema de tecnologias com bônus
+- Passagem do tempo e desbloqueio progressivo
+- Comércio com preços e rotas
+- Rotas com custo por distância
+- Rotas persistentes com custo por via
+- Cálculo de rotas com A*
+- Visualização de rotas
+- Intensidade/cor por eficiência
+
+**Versão 1.4.0 — Cultura, religião e política**
+
+- Cultura
+- Religião
+- Políticas múltiplas (primária + secundária)
+
+**Versão 1.5.0 — Efeitos especiais e mobilidade**
+
+- Railway (movimento turbo)
+- Foundry (+combate)
+- Library (+pesquisa)
+
+**Versão 1.6.0 — Mundo dinâmico**
+
+- Eventos de clima: seca e cheia
+- Expansão automática do mapa (expansão das fronteiras deve ocorrer com o passar das eras. A cada ~250 ticks aumentar o mapa em 1 tile para cada eixo)
+- Intervenção divina
+
 ## Project Structure & Module Organization
+
 - `src/app` contains Expo Router routes and layouts (e.g., `_layout.tsx`, `+not-found.tsx`, route groups like `(tabs)`).
 - `src/components`, `src/screens`, `src/contexts`, `src/stores`, and `src/common` hold shared UI, screens, state, and utilities.
 - `src/assets` stores images and other static assets.
@@ -26,6 +75,7 @@ Current features (v1.1.0):
 - Path alias: `@/` maps to `src` (see `tsconfig.json`).
 
 ## Build, Test, and Development Commands
+
 - `pnpm start` starts the Expo dev client (`expo start --dev-client`).
 - `pnpm android` runs the Android app on a device/emulator.
 - `pnpm ios` runs the iOS app (requires macOS).
@@ -37,15 +87,18 @@ Current features (v1.1.0):
 - `pnpm release` runs `commit-and-tag-version` to update the changelog.
 
 ## Coding Style & Naming Conventions
+
 - Indentation: 2 spaces, `singleQuote: true`, `printWidth: 100`, `trailingComma: es5`.
 - Use Tailwind classes in `className`; Prettier sorts them via `prettier-plugin-tailwindcss`.
 - Follow Expo Router file conventions in `src/app` for routes and layouts.
 
 ## Testing Guidelines
+
 - No test runner or test scripts are configured yet.
 - Add a test framework and a `test` script before introducing test files.
 
 ## Commit & Pull Request Guidelines
+
 - Use Conventional Commits (e.g., `feat: add onboarding screen`, `fix: handle null user`).
 - PRs should include a brief description. Screenshots are optional and encouraged for UI changes.
 - Changelog updates are managed via `commit-and-tag-version` and saved to `CHANGELOG.md`.
@@ -53,5 +106,6 @@ Current features (v1.1.0):
 - After every change, run `pnpm release` to increment the version, and update `AGENTS.md` with the correct version.
 
 ## Configuration Notes
+
 - Key config files: `app.json`, `eas.json`, `eslint.config.js`, `prettier.config.js`, `tailwind.config.js`.
 - EAS build commands require EAS CLI auth and appropriate profile setup.
