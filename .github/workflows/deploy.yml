@@ -23,11 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       EAS_CHANNEL: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      CI: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: 20.x
       - uses: expo/expo-github-action@8.2.1
         with:
           eas-version: latest
@@ -42,11 +43,12 @@ jobs:
     needs: Publish_Updates
     env:
       EAS_PROFILE: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      CI: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 18.x
+          node-version: 20.x
       - uses: expo/expo-github-action@8.2.1
         with:
           eas-version: latest
