@@ -130,7 +130,7 @@ export class Board {
         }
       })
       .filter(Boolean) as Tribe[];
-
+    // console.log(next.tribes)
     const should_new_tribe_appear = Math.random();
     if (should_new_tribe_appear < 0.02) {
       const newTribe = new Tribe({
@@ -454,6 +454,7 @@ export class Board {
    */
   private processEconomy(tribe: Tribe, tile: Tile) {
     const t = tribe.clone();
+    const hadSupplies = t.supplies > 0;
 
     // PRODUÇÃO baseada no terreno
     let production = this.getProduction(tile);
@@ -467,9 +468,10 @@ export class Board {
     // CONSUMO
     const consumption = Math.round(t.population * this.balance.supplies.consumptionPerPop);
     t.supplies -= consumption;
+    const hasSurplus = production > consumption;
 
     // CRESCIMENTO / FOME
-    if (production > consumption && t.supplies >= 1) {
+    if (hadSupplies && hasSurplus && t.supplies >= consumption) {
       // crescimento lento
       const growthRate = this.balance.population.growthRate + this.balance.core[t.core].growthBonus;
 
@@ -574,6 +576,7 @@ export class Board {
       population: Math.max(1, Math.floor(tribe.population * 0.2)),
       foundedTick: this.ticks,
     };
+    tribe.cities.push(tile.city.id);
 
     tribe.population = Math.max(1, tribe.population - this.balance.city.foundingCostPopulation);
     tribe.supplies = Math.max(0, tribe.supplies - this.balance.city.foundingCostSupplies);
@@ -616,6 +619,10 @@ export class Board {
     const conquestChance = clamp(0.2 + dominance * 0.3 + this.balance.city.defenseBase, 0, 0.8);
 
     if (Math.random() < conquestChance) {
+      defender.cities = defender.cities.filter((cityId) => cityId !== tile.city!.id);
+      if (!attacker.cities.includes(tile.city.id)) {
+        attacker.cities.push(tile.city.id);
+      }
       tile.city.ownerTribeId = attacker.id;
       tile.city.population = Math.max(1, Math.floor(tile.city.population * 0.8));
       this.logger({

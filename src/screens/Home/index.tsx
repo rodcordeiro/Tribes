@@ -29,13 +29,14 @@ export default function HomeScreen() {
           </Text>
         )}
         <View className="flex flex-row gap-2">
-          <Text className="">
-            {board?.tribes.length}
-            <Feather name="user" />
-          </Text>
-          <Text className="">
-            {board?.ticks} <Feather name="clock" />
-          </Text>
+          <View className="flex flex-row items-center justify-start gap-2 border-l-2 border-slate-500 bg-slate-300 py-1 pl-2 pr-4">
+            <Text className="font-semibold">{board?.tribes.length}</Text>
+            <Feather name="user" className="font-semibold" size={18} />
+          </View>
+          <View className="flex flex-row items-center justify-start gap-2 border-l-2 border-slate-500 bg-slate-300 py-1 pl-2 pr-4">
+            <Text className="">{board?.ticks}</Text>
+            <Feather name="clock" className="font-semibold" size={18} />
+          </View>
         </View>
       </View>
       <ScrollView className="flex h-full w-full px-3">

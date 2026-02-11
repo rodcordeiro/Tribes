@@ -55,4 +55,4 @@ jobs:
           eas-cache: true
           token: ${{ secrets.EXPO_TOKEN }}
       - run: npm install --force
-      - run: eas build -p android --profile ${{ env.EAS_PROFILE }}
+      - run: eas build -p android --profile ${{ env.EAS_PROFILE }} --no-wait

@@ -31,6 +31,7 @@ export class Tribe {
   public core!: TribeCore;
   public archetype!: TribeArchetype;
   public personality!: TribePersonality;
+  public cities: string[] = [];
 
   /**
    * Creates a tribe with initial stats, core, and archetype.
@@ -45,6 +46,7 @@ export class Tribe {
     id,
     archetype,
     personality,
+    cities = [],
   }: {
     id?: string;
     initialPosition: Game.Position;
@@ -55,6 +57,7 @@ export class Tribe {
     core: TribeCore;
     archetype?: TribeArchetype;
     personality?: TribePersonality;
+    cities?: string[];
   }) {
     this.id = id ?? uuid();
     this.position = initialPosition;
@@ -65,6 +68,7 @@ export class Tribe {
     this.core = core;
     this.archetype = archetype ?? getRandomArchetypeForCore(core);
     this.personality = personality ?? this.generatePersonality(core, this.archetype);
+    this.cities = [...cities];
   }
 
   /**
@@ -88,6 +92,7 @@ export class Tribe {
       core: nextCore,
       archetype: nextArchetype,
       personality: nextPersonality,
+      cities: [...this.cities],
     });
   }
 
@@ -102,6 +107,7 @@ export class Tribe {
    * Estimates threat posed by another tribe.
    */
   evaluateThreat(self: Tribe, other: Tribe): number {
+    if (self.id === other.id) return 0;
     return other.personality.aggression * 0.6 + (other.population / (self.population + 1)) * 0.4;
   }
 
@@ -109,6 +115,7 @@ export class Tribe {
    * Estimates cooperation opportunity between two tribes.
    */
   evaluateOpportunity(self: Tribe, other: Tribe): number {
+    if (self.id === other.id) return 0;
     return (self.personality.cooperation + other.personality.cooperation) / 2;
   }
 

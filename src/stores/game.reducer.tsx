@@ -59,7 +59,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'SET_SPEED':
       return { ...state, speed: action.speed };
     case 'LOG':
-      console.log(action.entry);
+      // console.debug(action.entry);
       return { ...state, logs: [...state.logs, action.entry] };
 
     default:
