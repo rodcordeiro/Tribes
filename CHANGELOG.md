@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## 1.1.1 (2026-02-15)
+
+### Features
+
+* **board:** corrige limites e indexacao do grid para cidades e estradas
+* **roads:** mantem segmentos com cor da tribo proprietaria
+* **quality:** adiciona plano em fases para cobertura de testes (10% -> 50% -> gate no pipeline)
+
 ## 1.1.0 (2026-02-11)
 
 

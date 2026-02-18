@@ -26,9 +26,13 @@ Current features (v1.1.1):
 
 - Cidades
 - Estradas/rotas e infraestrutura
-**Versão 1.1.1 — Cidades e infraestrutura**
+
+  **Versão 1.1.1 — Cidades e infraestrutura**
+
 - As rotas foram geradas por uma tribo, portanto devem ter a cor da tribo
-**Versão 1.1.2 — Cidades e infraestrutura**
+
+  **Versão 1.1.2 — Cidades e infraestrutura**
+
 - Caso a rota ultrapasse mais de um tile, esta rota deve ser interligada.
 
 **Versão 1.2.0 — Economia de recursos**
@@ -44,7 +48,7 @@ Current features (v1.1.1):
 - Comércio com preços e rotas
 - Rotas com custo por distância
 - Rotas persistentes com custo por via
-- Cálculo de rotas com A*
+- Cálculo de rotas com A\*
 - Visualização de rotas
 - Intensidade/cor por eficiência
 
@@ -65,6 +69,12 @@ Current features (v1.1.1):
 - Eventos de clima: seca e cheia
 - Expansão automática do mapa (expansão das fronteiras deve ocorrer com o passar das eras. A cada ~250 ticks aumentar o mapa em 1 tile para cada eixo)
 - Intervenção divina
+
+## Novas ideias
+
+1. 0.5% de chance de interação alienígena com uma tribo a cada tick
+2. uma chance de 1% de surgir um monólito de tecnologias perdidas que interage com o bloco em que nasce
+3. 0.05% Tribos pacíficas montarem um conclave e atacarem simultaneamente a tribo mais violenta.
 
 ## Project Structure & Module Organization
 
@@ -110,3 +120,7 @@ Current features (v1.1.1):
 
 - Key config files: `app.json`, `eas.json`, `eslint.config.js`, `prettier.config.js`, `tailwind.config.js`.
 - EAS build commands require EAS CLI auth and appropriate profile setup.
+
+# Instruções
+
+Vamos gerar a v1.1.2. Analise a seção de próximos passos do agents.md referente a esta versão e implemente as modificações.

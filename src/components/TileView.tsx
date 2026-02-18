@@ -17,6 +17,8 @@ const images = {
 export const TileView = React.memo(
   ({ tile, children }: { tile: Tile; size: number; children?: ReactNode }) => {
     const warOverlayOpacity = tile.warMemory > 0 ? 0.25 * tile.warMemory : 0;
+    const hasVerticalConnection = tile.roadConnections.up || tile.roadConnections.down;
+    const hasHorizontalConnection = tile.roadConnections.left || tile.roadConnections.right;
     // console.log({tileType:tile.tileType})
     return (
       <View
@@ -36,16 +38,62 @@ export const TileView = React.memo(
           />
         )}
         {tile.roadLevel > 0 && (
-          <View
-            pointerEvents="none"
-            style={[
-              tileStyles.road,
-              {
-                opacity: Math.min(1, tile.roadLevel),
-                backgroundColor: tile.roadColor ?? tileStyles.road.backgroundColor,
-              },
-            ]}
-          />
+          <View pointerEvents="none" style={tileStyles.roadLayer}>
+            {(hasHorizontalConnection || !hasVerticalConnection) && (
+              <View
+                style={[
+                  tileStyles.roadHorizontal,
+                  {
+                    opacity: Math.min(1, tile.roadLevel),
+                    backgroundColor: tile.roadColor ?? tileStyles.roadHorizontal.backgroundColor,
+                  },
+                ]}
+              />
+            )}
+            {hasVerticalConnection && (
+              <View
+                style={[
+                  tileStyles.roadVertical,
+                  {
+                    opacity: Math.min(1, tile.roadLevel),
+                    backgroundColor: tile.roadColor ?? tileStyles.roadVertical.backgroundColor,
+                  },
+                ]}
+              />
+            )}
+            {tile.roadConnections.up && (
+              <View
+                style={[
+                  tileStyles.roadUp,
+                  { backgroundColor: tile.roadColor ?? tileStyles.roadHorizontal.backgroundColor },
+                ]}
+              />
+            )}
+            {tile.roadConnections.right && (
+              <View
+                style={[
+                  tileStyles.roadRight,
+                  { backgroundColor: tile.roadColor ?? tileStyles.roadHorizontal.backgroundColor },
+                ]}
+              />
+            )}
+            {tile.roadConnections.down && (
+              <View
+                style={[
+                  tileStyles.roadDown,
+                  { backgroundColor: tile.roadColor ?? tileStyles.roadHorizontal.backgroundColor },
+                ]}
+              />
+            )}
+            {tile.roadConnections.left && (
+              <View
+                style={[
+                  tileStyles.roadLeft,
+                  { backgroundColor: tile.roadColor ?? tileStyles.roadHorizontal.backgroundColor },
+                ]}
+              />
+            )}
+          </View>
         )}
         {tile.city && (
           <View style={tileStyles.cityBadge}>
@@ -75,11 +123,52 @@ const tileStyles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'red',
   },
-  road: {
+  roadLayer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roadHorizontal: {
     position: 'absolute',
-    left: 4,
-    right: 4,
-    bottom: 4,
+    left: '20%',
+    right: '20%',
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: '#6b4e2e',
+  },
+  roadVertical: {
+    position: 'absolute',
+    top: '20%',
+    bottom: '20%',
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: '#6b4e2e',
+  },
+  roadUp: {
+    position: 'absolute',
+    top: 0,
+    width: 2,
+    height: '50%',
+    backgroundColor: '#6b4e2e',
+  },
+  roadRight: {
+    position: 'absolute',
+    right: 0,
+    width: '50%',
+    height: 2,
+    backgroundColor: '#6b4e2e',
+  },
+  roadDown: {
+    position: 'absolute',
+    bottom: 0,
+    width: 2,
+    height: '50%',
+    backgroundColor: '#6b4e2e',
+  },
+  roadLeft: {
+    position: 'absolute',
+    left: 0,
+    width: '50%',
     height: 2,
     backgroundColor: '#6b4e2e',
   },

@@ -1,4 +1,4 @@
-import { LogEntry } from '@/stores/game.reducer';
+import type { LogEntry } from '@/stores/game.reducer';
 import {
   clamp,
   getRandomIntInclusive,
@@ -17,6 +17,8 @@ interface ActiveEvent {
   event: GameEvent;
   remaining: number;
 }
+
+type RoadDirection = 'up' | 'right' | 'down' | 'left';
 
 export class Board {
   public MAX_HEIGHT?: number;
@@ -47,15 +49,15 @@ export class Board {
     logger: (_entry: LogEntry) => void;
   }) {
     this.logger = logger;
-    for (let y = 0; y <= width; y++) {
+    for (let y = 0; y < height; y++) {
       if (!this.tiles[y]) this.tiles[y] = [];
-      for (let x = 0; x <= height; x++) {
+      for (let x = 0; x < width; x++) {
         this.tiles[y][x] = new Tile({ board: this, x, y });
       }
     }
     for (let tribe = 1; tribe <= tribesCount; tribe++) {
-      let x = getRandomIntInclusive(0, width ?? 0);
-      let y = getRandomIntInclusive(0, height ?? 0);
+      const x = getRandomIntInclusive(0, Math.max(0, width - 1));
+      const y = getRandomIntInclusive(0, Math.max(0, height - 1));
 
       const newTribe = new Tribe({
         initialPosition: {
@@ -123,6 +125,7 @@ export class Board {
       .map((tribe) => {
         try {
           const tile = next.getTileAt(tribe.position);
+          if (!tile) return tribe;
           return next.processEconomy(tribe, tile);
         } catch (error) {
           console.error(error);
@@ -135,8 +138,8 @@ export class Board {
     if (should_new_tribe_appear < 0.02) {
       const newTribe = new Tribe({
         initialPosition: {
-          x: getRandomIntInclusive(0, next.MAX_WIDTH ?? 0),
-          y: getRandomIntInclusive(0, next.MAX_HEIGHT ?? 0),
+          x: getRandomIntInclusive(0, Math.max(0, (next.MAX_WIDTH ?? 1) - 1)),
+          y: getRandomIntInclusive(0, Math.max(0, (next.MAX_HEIGHT ?? 1) - 1)),
         },
         name: getTribeName(),
         color: randomHexColor(),
@@ -446,7 +449,7 @@ export class Board {
    * Returns the tile at a given position.
    */
   public getTileAt(position: Game.Position) {
-    return this.tiles[position.x][position.y];
+    return this.tiles[position.y]?.[position.x];
   }
 
   /**
@@ -504,8 +507,10 @@ export class Board {
     ];
 
     return directions
-      .map((d) => this.getTileAt({ x: clamp(pos.x + d.x, 0, 1), y: clamp(pos.y + d.y, 0, 1) }))
-      .filter(Boolean);
+      .map((d) => ({ x: pos.x + d.x, y: pos.y + d.y }))
+      .filter((adjacentPos) => this.isValidPosition(adjacentPos))
+      .map((adjacentPos) => this.getTileAt(adjacentPos))
+      .filter(Boolean) as Tile[];
   }
 
   /**
@@ -604,8 +609,47 @@ export class Board {
     );
     tile.roadOwnerId = tribe.id;
     tile.roadColor = tribe.color;
+    this.connectRoadToAdjacentSegments(tile, tribe.id);
     tribe.supplies = Math.max(0, tribe.supplies - this.balance.roads.buildCostSupplies);
     this.logger({ type: 'Info', content: `${tribe.name} built a road segment.` });
+  }
+
+  private connectRoadToAdjacentSegments(tile: Tile, ownerId: string) {
+    const adjacentTiles = this.getNeighborTiles(tile.position);
+
+    adjacentTiles.forEach((neighbor) => {
+      if (neighbor.roadLevel < 1 || neighbor.roadOwnerId !== ownerId) return;
+      const direction = this.getRoadDirection(tile.position, neighbor.position);
+      if (!direction) return;
+
+      tile.roadConnections[direction] = true;
+      neighbor.roadConnections[this.getOppositeRoadDirection(direction)] = true;
+    });
+  }
+
+  private getRoadDirection(from: Game.Position, to: Game.Position): RoadDirection | undefined {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+
+    if (dx === 0 && dy === -1) return 'up';
+    if (dx === 1 && dy === 0) return 'right';
+    if (dx === 0 && dy === 1) return 'down';
+    if (dx === -1 && dy === 0) return 'left';
+
+    return undefined;
+  }
+
+  private getOppositeRoadDirection(direction: RoadDirection): RoadDirection {
+    switch (direction) {
+      case 'up':
+        return 'down';
+      case 'right':
+        return 'left';
+      case 'down':
+        return 'up';
+      case 'left':
+        return 'right';
+    }
   }
 
   private resolveCityAfterBattle(

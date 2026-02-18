@@ -9,7 +9,6 @@ import defensor from '@/assets/tribes/defensor.png';
 import saqueador from '@/assets/tribes/saqueador.png';
 import { Tribe } from '@/common/game/tribe';
 import { clsx } from 'clsx';
-import { useEffect, useState } from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
 import { useGame } from '../../contexts/game.context';
 
@@ -48,7 +47,7 @@ function TribeView({ tribe, position }: { tribe: Tribe; position: number }) {
           <View>
             <Text>Population: {tribe.population}</Text>
             <Text>Supplies: {tribe.supplies}</Text>
-            <Text>Cities: {tribe.cities.length}</Text>
+            <Text>Cities: {tribe.cities?.length ?? 0}</Text>
           </View>
         </View>
         <Image
@@ -66,26 +65,22 @@ function TribeView({ tribe, position }: { tribe: Tribe; position: number }) {
 }
 
 export function TribesScreen() {
-  const [tribes, setTribes] = useState<Tribe[]>();
   const {
     state: { board },
   } = useGame();
 
-  useEffect(() => {
-    if (board?.tribes) setTribes(board.tribes.sort((a, b) => b.population - a.population));
-  }, [board?.tribes]);
+  const tribes: Tribe[] = [...(board?.tribes ?? [])].sort((a, b) => b.population - a.population);
+  const topTribe = tribes[0];
+  const remainingTribes = tribes.slice(1);
 
   return (
     <View className="mt-10 flex h-screen w-fit px-3">
       <ScrollView nestedScrollEnabled>
-        {tribes && <TribeView tribe={tribes.at(0) as Tribe} position={0} />}
+        {topTribe ? <TribeView tribe={topTribe} position={0} /> : null}
         <ScrollView className="mt-10" contentContainerClassName="gap-2" horizontal pagingEnabled>
-          {tribes &&
-            tribes
-              .slice(1)
-              .map((tribe, idx) => (
-                <TribeView key={`tribe_view_${idx}`} tribe={tribe} position={idx + 1} />
-              ))}
+          {remainingTribes.map((tribe, idx) => (
+            <TribeView key={`tribe_view_${tribe.id ?? idx}`} tribe={tribe} position={idx + 1} />
+          ))}
         </ScrollView>
       </ScrollView>
     </View>

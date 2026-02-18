@@ -47,6 +47,7 @@ export class Tribe {
     archetype,
     personality,
     cities = [],
+    applyInitialVariance = true,
   }: {
     id?: string;
     initialPosition: Game.Position;
@@ -58,13 +59,18 @@ export class Tribe {
     archetype?: TribeArchetype;
     personality?: TribePersonality;
     cities?: string[];
+    applyInitialVariance?: boolean;
   }) {
     this.id = id ?? uuid();
     this.position = initialPosition;
     this.name = name;
     this.color = color;
-    this.population = Math.floor(initialPopulation + initialPopulation * Math.random());
-    this.supplies = Math.floor(initialSupplies + initialSupplies * Math.random());
+    this.population = applyInitialVariance
+      ? Math.floor(initialPopulation + initialPopulation * Math.random())
+      : initialPopulation;
+    this.supplies = applyInitialVariance
+      ? Math.floor(initialSupplies + initialSupplies * Math.random())
+      : initialSupplies;
     this.core = core;
     this.archetype = archetype ?? getRandomArchetypeForCore(core);
     this.personality = personality ?? this.generatePersonality(core, this.archetype);
@@ -80,7 +86,7 @@ export class Tribe {
     const nextArchetype = shouldChangeCore ? getRandomArchetypeForCore(nextCore) : this.archetype;
     const nextPersonality = shouldChangeCore
       ? this.generatePersonality(nextCore, nextArchetype)
-      : this.personality;
+      : { ...this.personality };
 
     return new Tribe({
       id: this.id,
@@ -93,6 +99,7 @@ export class Tribe {
       archetype: nextArchetype,
       personality: nextPersonality,
       cities: [...this.cities],
+      applyInitialVariance: false,
     });
   }
 

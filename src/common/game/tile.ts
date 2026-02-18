@@ -17,6 +17,12 @@ export class Tile {
   public roadLevel: number = 0;
   public roadOwnerId?: string;
   public roadColor?: string;
+  public roadConnections: { up: boolean; right: boolean; down: boolean; left: boolean } = {
+    up: false,
+    right: false,
+    down: false,
+    left: false,
+  };
 
   /**
    * Creates a tile at the given coordinates and assigns a random tile type.
