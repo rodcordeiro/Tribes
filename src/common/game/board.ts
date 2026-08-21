@@ -75,6 +75,7 @@ export class Board {
     this.MAX_HEIGHT = height;
     this.MAX_WIDTH = width;
     this.balance = balance;
+    this.resolveTileControl();
   }
 
   /**
@@ -133,6 +134,7 @@ export class Board {
         }
       })
       .filter(Boolean) as Tribe[];
+    next.removeInactiveAlliances();
     // console.log(next.tribes)
     const should_new_tribe_appear = Math.random();
     if (should_new_tribe_appear < 0.02) {
@@ -151,12 +153,21 @@ export class Board {
 
     next.tribes.forEach((tribe) => {
       try {
-        this.decideAction(tribe, next);
+        next.decideAction(tribe);
+      } catch (e) {
+        console.error(e);
+      }
+    });
+
+    next.resolveTileControl();
+    next.tribes.forEach((tribe) => {
+      try {
         next.applySettlementAndInfrastructure(tribe);
       } catch (e) {
         console.error(e);
       }
     });
+    next.reconcileRoadConnections();
 
     next.decayTileMemories();
 
@@ -176,13 +187,15 @@ export class Board {
   /**
    * Determines the next action for a tribe based on nearby tribes and core.
    */
-  decideAction(tribe: Tribe, nextBoard: Board) {
+  decideAction(tribe: Tribe) {
     const nearby = this.getNearbyTribes(tribe, tribe.personality.expansionism > 0.75 ? 2 : 1);
     if (nearby.length === 0) {
       return this.decideExploration(tribe);
     }
 
     for (const other of nearby) {
+      if (this.areAllied(tribe, other)) continue;
+
       const threat = tribe.evaluateThreat(tribe, other);
       const opportunity = tribe.evaluateOpportunity(tribe, other);
 
@@ -200,7 +213,7 @@ export class Board {
 
       // 3️⃣ COOPERAÇÃO / CASAMENTO
       if (tribe.core === 'peace' && opportunity > Math.random()) {
-        return this.mergeTribes(tribe, other, nextBoard);
+        return this.establishAlliance(tribe, other);
       }
     }
 
@@ -212,7 +225,7 @@ export class Board {
    */
   getNearbyTribes(tribe: Tribe, range = 1): Tribe[] {
     return this.tribes.filter((other) => {
-      if (other === tribe || !other.position || !tribe.position) return false;
+      if (other.id === tribe.id || !other.position || !tribe.position) return false;
 
       const dx = Math.abs(other.position.x - tribe.position.x);
       const dy = Math.abs(other.position.y - tribe.position.y);
@@ -225,6 +238,8 @@ export class Board {
    * Moves a tribe away from a threat, clamping to valid board bounds.
    */
   flee(tribe: Tribe, threat: Tribe) {
+    if (this.areAllied(tribe, threat)) return;
+
     const dx = tribe.position!.x - threat.position!.x;
     const dy = tribe.position!.y - threat.position!.y;
 
@@ -250,6 +265,8 @@ export class Board {
    * Resolves combat between attacker and defender and updates their stats.
    */
   attack(attacker: Tribe, defender: Tribe) {
+    if (this.areAllied(attacker, defender)) return;
+
     const powerA = attacker.population * attacker.personality.aggression;
     const powerD = defender.population * (1 - defender.personality.fear);
 
@@ -289,22 +306,15 @@ export class Board {
   }
 
   /**
-   * Merges two tribes into a new one on the provided board.
+   * Creates a persistent bilateral alliance between two tribes.
    */
-  mergeTribes(a: Tribe, b: Tribe, nextBoard: Board) {
-    const newPop = Math.floor((a.population + b.population) * 0.6);
+  establishAlliance(a: Tribe, b: Tribe) {
+    if (a.id === b.id || this.areAllied(a, b)) return;
 
-    nextBoard.tribes = this.tribes.filter((t) => t !== a && t !== b);
-
-    nextBoard.tribes.push(
-      new Tribe({
-        initialPosition: a.position!,
-        name: getTribeName(),
-        color: randomHexColor(),
-        core: randomEnumValue(TribeCore),
-        initialPopulation: newPop,
-      })
-    );
+    a.allies.push(b.id);
+    b.allies.push(a.id);
+    this.logger({ type: 'Alliance', content: `${a.name} and ${b.name} formed an alliance.` });
+    this.reconcileRoadConnections();
   }
 
   /**
@@ -453,6 +463,68 @@ export class Board {
   }
 
   /**
+   * Returns whether two tribes have an active bilateral alliance.
+   */
+  private areAllied(a: Tribe, b: Tribe): boolean {
+    return a.allies.includes(b.id) && b.allies.includes(a.id);
+  }
+
+  /**
+   * Removes alliance references whose counterpart no longer exists.
+   */
+  private removeInactiveAlliances() {
+    const activeIds = new Set(this.tribes.map((tribe) => tribe.id));
+    this.tribes.forEach((tribe) => {
+      tribe.allies = tribe.allies.filter((allyId) => activeIds.has(allyId));
+    });
+  }
+
+  /**
+   * Assigns persistent tile control after movement without resolving disputed occupancy by order.
+   */
+  private resolveTileControl() {
+    const occupants = new Map<string, Tribe[]>();
+
+    this.tribes.forEach((tribe) => {
+      if (!tribe.position || !this.isValidPosition(tribe.position)) return;
+      const key = `${tribe.position.x}:${tribe.position.y}`;
+      occupants.set(key, [...(occupants.get(key) ?? []), tribe]);
+    });
+
+    occupants.forEach((tribes) => {
+      if (tribes.length !== 1) return;
+      const controller = tribes[0];
+      const tile = this.getTileAt(controller.position);
+      if (!tile) return;
+
+      tile.controllerTribeId = controller.id;
+      if (tile.roadOwnerId && !this.canTribesShareRoad(controller.id, tile.roadOwnerId)) {
+        this.removeRoad(tile);
+      }
+    });
+  }
+
+  /**
+   * Returns whether road segments owned by two tribes may remain connected.
+   */
+  private canTribesShareRoad(firstId: string, secondId: string): boolean {
+    if (firstId === secondId) return true;
+    const first = this.tribes.find((tribe) => tribe.id === firstId);
+    const second = this.tribes.find((tribe) => tribe.id === secondId);
+    return Boolean(first && second && this.areAllied(first, second));
+  }
+
+  /**
+   * Removes a road segment and all of its local connection metadata.
+   */
+  private removeRoad(tile: Tile) {
+    tile.roadLevel = 0;
+    tile.roadOwnerId = undefined;
+    tile.roadColor = undefined;
+    tile.roadConnections = { up: false, right: false, down: false, left: false };
+  }
+
+  /**
    * Processes economy effects for a tribe on a tile.
    */
   private processEconomy(tribe: Tribe, tile: Tile) {
@@ -559,7 +631,7 @@ export class Board {
   private applySettlementAndInfrastructure(tribe: Tribe) {
     if (!tribe.position) return;
     const tile = this.getTileAt(tribe.position);
-    if (!tile) return;
+    if (!tile || tile.controllerTribeId !== tribe.id) return;
     this.tryFoundCity(tribe, tile);
     this.tryBuildRoad(tribe, tile);
   }
@@ -591,8 +663,10 @@ export class Board {
 
   private tryBuildRoad(tribe: Tribe, tile: Tile) {
     if (tile.tileType === TileType.WaterTile || tile.tileType === TileType.Mountain) return;
-    if (tile.roadLevel >= this.balance.roads.maxLevel) return;
     if (tribe.supplies < this.balance.roads.buildCostSupplies) return;
+
+    const destination = this.findNearestDisconnectedCity(tribe, tile);
+    if (!destination) return;
 
     const cityBonus = tile.city?.ownerTribeId === tribe.id ? 0.2 : 0;
     const chance = clamp(
@@ -602,28 +676,196 @@ export class Board {
     );
     if (Math.random() > chance) return;
 
-    tile.roadLevel = clamp(
-      tile.roadLevel + this.balance.roads.levelGain,
-      0,
-      this.balance.roads.maxLevel
-    );
-    tile.roadOwnerId = tribe.id;
-    tile.roadColor = tribe.color;
-    this.connectRoadToAdjacentSegments(tile, tribe.id);
+    const path = this.findProvisionalRoadPath(tribe, tile.position, destination.position);
+    if (!path) return;
+
+    path.forEach((pathTile) => {
+      if (pathTile.roadLevel > 0) return;
+      pathTile.roadLevel = clamp(this.balance.roads.levelGain, 0, this.balance.roads.maxLevel);
+      pathTile.roadOwnerId = tribe.id;
+      pathTile.roadColor = tribe.color;
+    });
+    this.reconcileRoadConnections();
     tribe.supplies = Math.max(0, tribe.supplies - this.balance.roads.buildCostSupplies);
-    this.logger({ type: 'Info', content: `${tribe.name} built a road segment.` });
+    this.logger({
+      type: 'Info',
+      content: `${tribe.name} built a road to ${destination.city?.name}.`,
+    });
+  }
+
+  /**
+   * Finds the nearest owned city that is distinct from and disconnected from the origin.
+   */
+  private findNearestDisconnectedCity(tribe: Tribe, origin: Tile): Tile | undefined {
+    return this.tiles
+      .flat()
+      .filter(
+        (candidate) =>
+          candidate.city?.ownerTribeId === tribe.id &&
+          (candidate.position.x !== origin.position.x ||
+            candidate.position.y !== origin.position.y) &&
+          !this.hasRoadConnection(origin, candidate, tribe.id)
+      )
+      .sort(
+        (a, b) =>
+          Math.abs(a.position.x - origin.position.x) +
+          Math.abs(a.position.y - origin.position.y) -
+          (Math.abs(b.position.x - origin.position.x) + Math.abs(b.position.y - origin.position.y))
+      )[0];
+  }
+
+  /**
+   * Checks road connectivity through segments owned by a tribe or its allies.
+   */
+  private hasRoadConnection(origin: Tile, destination: Tile, tribeId: string): boolean {
+    if (!this.isUsableRoadSegment(origin, tribeId)) return false;
+
+    const destinationKey = this.getPositionKey(destination.position);
+    const visited = new Set<string>();
+    const pending: Tile[] = [origin];
+
+    while (pending.length > 0) {
+      const current = pending.shift()!;
+      const currentKey = this.getPositionKey(current.position);
+      if (visited.has(currentKey)) continue;
+      if (currentKey === destinationKey) return true;
+      visited.add(currentKey);
+
+      this.getNeighborTiles(current.position).forEach((neighbor) => {
+        if (
+          current.roadOwnerId &&
+          neighbor.roadOwnerId &&
+          !visited.has(this.getPositionKey(neighbor.position)) &&
+          this.isUsableRoadSegment(neighbor, tribeId) &&
+          this.canTribesShareRoad(current.roadOwnerId, neighbor.roadOwnerId)
+        ) {
+          pending.push(neighbor);
+        }
+      });
+    }
+
+    return false;
+  }
+
+  /**
+   * Builds a provisional orthogonal L path, trying horizontal-first and then vertical-first.
+   */
+  private findProvisionalRoadPath(
+    tribe: Tribe,
+    origin: Game.Position,
+    destination: Game.Position
+  ): Tile[] | undefined {
+    const horizontalFirst = this.createOrthogonalPath(origin, destination, true);
+    if (this.isRoadPathTraversable(horizontalFirst, tribe.id)) return horizontalFirst;
+
+    const verticalFirst = this.createOrthogonalPath(origin, destination, false);
+    if (this.isRoadPathTraversable(verticalFirst, tribe.id)) return verticalFirst;
+
+    return undefined;
+  }
+
+  /**
+   * Creates an orthogonal path between two positions using the selected first axis.
+   */
+  private createOrthogonalPath(
+    origin: Game.Position,
+    destination: Game.Position,
+    horizontalFirst: boolean
+  ): Tile[] {
+    const positions: Game.Position[] = [{ ...origin }];
+    const cursor = { ...origin };
+    const moveHorizontal = () => {
+      while (cursor.x !== destination.x) {
+        cursor.x += Math.sign(destination.x - cursor.x);
+        positions.push({ ...cursor });
+      }
+    };
+    const moveVertical = () => {
+      while (cursor.y !== destination.y) {
+        cursor.y += Math.sign(destination.y - cursor.y);
+        positions.push({ ...cursor });
+      }
+    };
+
+    if (horizontalFirst) {
+      moveHorizontal();
+      moveVertical();
+    } else {
+      moveVertical();
+      moveHorizontal();
+    }
+
+    return positions.map((position) => this.getTileAt(position)).filter(Boolean) as Tile[];
+  }
+
+  /**
+   * Validates terrain, territorial control, and existing road ownership for an atomic path.
+   */
+  private isRoadPathTraversable(path: Tile[], tribeId: string): boolean {
+    return (
+      path.length > 1 &&
+      path.every((tile, index) => {
+        if (tile.tileType === TileType.WaterTile || tile.tileType === TileType.Mountain) {
+          return false;
+        }
+        if (tile.controllerTribeId && !this.canTribesShareRoad(tribeId, tile.controllerTribeId)) {
+          return false;
+        }
+        if (tile.roadOwnerId && !this.canTribesShareRoad(tribeId, tile.roadOwnerId)) {
+          return false;
+        }
+        if (index === 0) return true;
+
+        const previousOwnerId = path[index - 1].roadOwnerId ?? tribeId;
+        const currentOwnerId = tile.roadOwnerId ?? tribeId;
+        return this.canTribesShareRoad(previousOwnerId, currentOwnerId);
+      })
+    );
+  }
+
+  /**
+   * Returns whether a tile contains a road usable by the provided tribe.
+   */
+  private isUsableRoadSegment(tile: Tile, tribeId: string): boolean {
+    return Boolean(
+      tile.roadLevel > 0 && tile.roadOwnerId && this.canTribesShareRoad(tribeId, tile.roadOwnerId)
+    );
+  }
+
+  private getPositionKey(position: Game.Position): string {
+    return `${position.x}:${position.y}`;
   }
 
   private connectRoadToAdjacentSegments(tile: Tile, ownerId: string) {
     const adjacentTiles = this.getNeighborTiles(tile.position);
 
     adjacentTiles.forEach((neighbor) => {
-      if (neighbor.roadLevel < 1 || neighbor.roadOwnerId !== ownerId) return;
+      if (
+        neighbor.roadLevel < 1 ||
+        !neighbor.roadOwnerId ||
+        !this.canTribesShareRoad(ownerId, neighbor.roadOwnerId)
+      ) {
+        return;
+      }
       const direction = this.getRoadDirection(tile.position, neighbor.position);
       if (!direction) return;
 
       tile.roadConnections[direction] = true;
       neighbor.roadConnections[this.getOppositeRoadDirection(direction)] = true;
+    });
+  }
+
+  /**
+   * Rebuilds all road connections from current ownership and alliance state.
+   */
+  private reconcileRoadConnections() {
+    this.tiles.flat().forEach((tile) => {
+      tile.roadConnections = { up: false, right: false, down: false, left: false };
+    });
+
+    this.tiles.flat().forEach((tile) => {
+      if (tile.roadLevel < 1 || !tile.roadOwnerId) return;
+      this.connectRoadToAdjacentSegments(tile, tile.roadOwnerId);
     });
   }
 
@@ -670,6 +912,10 @@ export class Board {
         attacker.cities.push(tile.city.id);
       }
       tile.city.ownerTribeId = attacker.id;
+      tile.controllerTribeId = attacker.id;
+      if (tile.roadOwnerId && !this.canTribesShareRoad(attacker.id, tile.roadOwnerId)) {
+        this.removeRoad(tile);
+      }
       tile.city.population = Math.max(1, Math.floor(tile.city.population * 0.8));
       this.logger({
         type: 'War',

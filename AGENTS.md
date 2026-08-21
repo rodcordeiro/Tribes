@@ -1,126 +1,26 @@
-﻿# Repository Guidelines
+# Tribes Agent Guide
 
-## Project Description
+Tribes v1.1.2 is an Expo 54 / React Native 0.81 autonomous strategy simulation. Expo Router starts in `src/app/`; simulation behavior lives primarily in `src/common/game/board.ts` and state orchestration in `src/contexts/game.context.tsx`.
 
-Tribes is an autonomous tribal strategy game inspired by Civilization. At startup, the game generates a board and spawns 4 tribes. On each tick (initially 1s), tribes interact with the world and with each other through a decision engine that can choose to move across the map, stay put, ally with other tribes, or go to war. Tribes that reach high population and resource thresholds can split into new tribes. The application is currently at version 1.1.1, and each release will add new functionality.
+## Como usar este contexto
 
-Current features (v1.1.1):
+| Quando | Ler |
+| --- | --- |
+| Entender domínio e roadmap | `.agents/references/domain.md` e `CONTEXT.md` |
+| Alterar simulação, telas ou estado | `.agents/references/structure.md`, `runtime.md` e `patterns.md` |
+| Implementar ou validar mudanças | `.agents/references/conventions.md` |
+| Avaliar limitações conhecidas | `.agents/references/tech-debt.md` |
+| Aplicar padrões mobile | `$nero` → `references/guidelines/mobile-guidelines.md` |
 
-- Procedural board generation at initialization.
-- Spawn of 4 tribes at game start.
-- Tick-based simulation loop with initial tick duration of 1s.
-- Decision engine actions: move, stay, ally, or declare war.
-- Tribe splitting based on population and resource thresholds.
-- Tribes have a core (war, peace, exploration) that influences decisions, with archetypes per core that shape movement, stability, and production preferences.
-- Each tribe receives a random core and archetype, with a 2% chance per tick to change core (and archetype) dynamically.
-- Flee movement validates board bounds to prevent tribes from leaving the map.
-- Tiles keep a fading memory of wars (10 ticks) that peace tribes avoid, with a red overlay and productivity impact on adjacent tiles.
-- Cities can be founded on suitable tiles and grow over time when occupied.
-- Battles on city tiles can lead to conquest or raids that steal supplies and reduce city population.
-- Tribes can build basic road infrastructure that boosts local production and is visible on tiles.
-- Roads are colored based on the tribe that built them.
+## Regras rápidas
 
-## Próximos passos
+- Faça mudanças pequenas e preserve as fronteiras atuais; não reestruture o código sem pedido explícito.
+- Não invente regras de negócio. Use `CONTEXT.md` e os ADRs; registre hipóteses quando ainda não houver decisão.
+- Não altere migrations, CI/CD, infraestrutura, dependências ou testes sem solicitação explícita.
+- Use `pnpm`; valide mudanças com `pnpm test` e `pnpm lint` quando aplicável.
+- Após cada mudança, execute `pnpm release` e mantenha `package.json`, `CHANGELOG.md` e esta versão coerentes.
 
-**Versão 1.1.0 — Cidades e infraestrutura**
+## Skills condicionais
 
-- Cidades
-- Estradas/rotas e infraestrutura
-
-  **Versão 1.1.1 — Cidades e infraestrutura**
-
-- As rotas foram geradas por uma tribo, portanto devem ter a cor da tribo
-
-  **Versão 1.1.2 — Cidades e infraestrutura**
-
-- Caso a rota ultrapasse mais de um tile, esta rota deve ser interligada.
-
-**Versão 1.2.0 — Economia de recursos**
-
-- Economia multi-recurso (comida, metal, conhecimento)
-- Mineração em montanha
-- Bibliotecas geram conhecimento. As bibliotecas devem ser construidas nas cidades e como requisito, a tribo deve possuir ao menos 3 cidades para construir uma biblioteca.
-
-**Versão 1.3.0 — Tecnologia e eras**
-
-- Sistema de tecnologias com bônus
-- Passagem do tempo e desbloqueio progressivo
-- Comércio com preços e rotas
-- Rotas com custo por distância
-- Rotas persistentes com custo por via
-- Cálculo de rotas com A\*
-- Visualização de rotas
-- Intensidade/cor por eficiência
-
-**Versão 1.4.0 — Cultura, religião e política**
-
-- Cultura
-- Religião
-- Políticas múltiplas (primária + secundária)
-
-**Versão 1.5.0 — Efeitos especiais e mobilidade**
-
-- Railway (movimento turbo)
-- Foundry (+combate)
-- Library (+pesquisa)
-
-**Versão 1.6.0 — Mundo dinâmico**
-
-- Eventos de clima: seca e cheia
-- Expansão automática do mapa (expansão das fronteiras deve ocorrer com o passar das eras. A cada ~250 ticks aumentar o mapa em 1 tile para cada eixo)
-- Intervenção divina
-
-## Novas ideias
-
-1. 0.5% de chance de interação alienígena com uma tribo a cada tick
-2. uma chance de 1% de surgir um monólito de tecnologias perdidas que interage com o bloco em que nasce
-3. 0.05% Tribos pacíficas montarem um conclave e atacarem simultaneamente a tribo mais violenta.
-
-## Project Structure & Module Organization
-
-- `src/app` contains Expo Router routes and layouts (e.g., `_layout.tsx`, `+not-found.tsx`, route groups like `(tabs)`).
-- `src/components`, `src/screens`, `src/contexts`, `src/stores`, and `src/common` hold shared UI, screens, state, and utilities.
-- `src/assets` stores images and other static assets.
-- `src/@types` holds shared TypeScript declarations.
-- `android/` is the native Android project generated by Expo prebuild.
-- Path alias: `@/` maps to `src` (see `tsconfig.json`).
-
-## Build, Test, and Development Commands
-
-- `pnpm start` starts the Expo dev client (`expo start --dev-client`).
-- `pnpm android` runs the Android app on a device/emulator.
-- `pnpm ios` runs the iOS app (requires macOS).
-- `pnpm web` starts the web build.
-- `pnpm prebuild` regenerates native projects from Expo config.
-- `pnpm build:dev`, `pnpm build:preview`, `pnpm build:prod` run EAS builds for each profile.
-- `pnpm lint` checks ESLint + Prettier formatting.
-- `pnpm format` fixes ESLint issues and formats with Prettier.
-- `pnpm release` runs `commit-and-tag-version` to update the changelog.
-
-## Coding Style & Naming Conventions
-
-- Indentation: 2 spaces, `singleQuote: true`, `printWidth: 100`, `trailingComma: es5`.
-- Use Tailwind classes in `className`; Prettier sorts them via `prettier-plugin-tailwindcss`.
-- Follow Expo Router file conventions in `src/app` for routes and layouts.
-
-## Testing Guidelines
-
-- No test runner or test scripts are configured yet.
-- Add a test framework and a `test` script before introducing test files.
-
-## Commit & Pull Request Guidelines
-
-- Use Conventional Commits (e.g., `feat: add onboarding screen`, `fix: handle null user`).
-- PRs should include a brief description. Screenshots are optional and encouraged for UI changes.
-- Changelog updates are managed via `commit-and-tag-version` and saved to `CHANGELOG.md`.
-- Husky runs `lint-staged` on `pre-commit` to enforce formatting/lint on staged files.
-- After every change, run `pnpm release` to increment the version, and update `AGENTS.md` with the correct version.
-
-## Configuration Notes
-
-- Key config files: `app.json`, `eas.json`, `eslint.config.js`, `prettier.config.js`, `tailwind.config.js`.
-- EAS build commands require EAS CLI auth and appropriate profile setup.
-
-# Instruções
-
-Vamos gerar a v1.1.2. Analise a seção de próximos passos do agents.md referente a esta versão e implemente as modificações.
+- Em qualquer tarefa deste app mobile, use `$nero`, `$vercel-react-native-skills` e `$react-native-best-practices`.
+- Para modelagem de termos ou decisões duráveis, use `domain-modeling`; para decisões ainda ambíguas, use `grilling` antes de implementar.

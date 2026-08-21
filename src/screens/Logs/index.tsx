@@ -31,4 +31,7 @@ const styles = StyleSheet.create({
   Marriage: {
     color: 'violet',
   },
+  Alliance: {
+    color: 'blue',
+  },
 });

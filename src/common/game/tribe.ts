@@ -32,6 +32,7 @@ export class Tribe {
   public archetype!: TribeArchetype;
   public personality!: TribePersonality;
   public cities: string[] = [];
+  public allies: string[] = [];
 
   /**
    * Creates a tribe with initial stats, core, and archetype.
@@ -47,6 +48,7 @@ export class Tribe {
     archetype,
     personality,
     cities = [],
+    allies = [],
     applyInitialVariance = true,
   }: {
     id?: string;
@@ -59,6 +61,7 @@ export class Tribe {
     archetype?: TribeArchetype;
     personality?: TribePersonality;
     cities?: string[];
+    allies?: string[];
     applyInitialVariance?: boolean;
   }) {
     this.id = id ?? uuid();
@@ -75,6 +78,7 @@ export class Tribe {
     this.archetype = archetype ?? getRandomArchetypeForCore(core);
     this.personality = personality ?? this.generatePersonality(core, this.archetype);
     this.cities = [...cities];
+    this.allies = [...allies];
   }
 
   /**
@@ -99,6 +103,7 @@ export class Tribe {
       archetype: nextArchetype,
       personality: nextPersonality,
       cities: [...this.cities],
+      allies: [...this.allies],
       applyInitialVariance: false,
     });
   }

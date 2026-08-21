@@ -13,6 +13,7 @@ export class Tile {
   public position: Game.Position = { x: -1, y: -1 };
   public tileType?: TileType;
   public warMemory: number = 0;
+  public controllerTribeId?: string;
   public city?: City;
   public roadLevel: number = 0;
   public roadOwnerId?: string;
